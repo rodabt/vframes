@@ -1,0 +1,18 @@
+# Binaries for programs and plugins
+vframes
+
+# Ignore binary output folders
+tmp/
+
+# Ignore common editor/system specific metadata
+.DS_Store
+.vscode/
+
+# ENV
+.env
+
+# Local databases
+*.db
+
+# Reserved files
+TODO.md
