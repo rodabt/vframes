@@ -33,10 +33,10 @@ pub fn execute_box(filepath string, cmd string) string {
 }
 
 // Executes commands as a block and returns the result as a list with no header
-pub fn execute_block(filepath string, block string) string {
+pub fn execute_block(filepath string, cmd string) string {
 	// TODO: Refactor
 	mut f, temp_path := util.temp_file(pattern: 'temp_') or { panic(err) }
-	f.writeln(block) or { panic(err) }
+	f.writeln(cmd) or { panic(err) }
 	f.close()
 	res := os.execute('${bin} -list -noheader -separator "," ${filepath} < ${temp_path}')
 	os.rm(temp_path) or { panic(err) }
