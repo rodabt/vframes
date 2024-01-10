@@ -41,7 +41,6 @@ pub mut:
 
 pub struct DataframeContext {
 pub mut:
-	// TODO: Set global default options for best perfomance (SET) and add to Config
 	dpath				string
 	df					map[string]DataFrame
 } 

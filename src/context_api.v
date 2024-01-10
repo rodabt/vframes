@@ -10,6 +10,19 @@ import x.json2
 
 
 // Creates a new DataFrame context
+
+// A context is a container for multiple DataFrames.
+// It must be initialized before use, and optionally it 
+// accepts a `Config` struct parameter where you can
+// provide the location of the container. 
+//
+// Example: 
+// ```v
+// import vframes
+
+// mut d := vframes.set_context(dpath: '/tmp/container.db')
+// d.init()
+// ```
 pub fn set_context(config Config) DataframeContext {
 	d := DataframeContext{
 		dpath: config.dpath
@@ -18,7 +31,7 @@ pub fn set_context(config Config) DataframeContext {
 }
 
 
-// Inititalizes references to DataFrames in context 
+// Inititalizes a DataFrame context
 pub fn (mut d DataframeContext) init() map[string]DataFrame {
 	return *( unsafe { &d.df } )
 }
@@ -29,7 +42,22 @@ pub fn (mut d DataframeContext) init() map[string]DataFrame {
 **/
 
 
-// Load data from `filepath` to DataFrame `name` inside the context
+// Loads data from `filepath` to DataFrame `name` inside the context
+//
+// Example:
+// ```v
+// // https://github.com/datablist/sample-csv-files/raw/main/files/people/people-1000.csv 
+// d.load_from_file('df1', 'people-1000.csv')
+// d.load_from_file('df1','people-1000.csv')
+// d
+// vframes.DataframeContext{
+//     dpath: '/tmp/container.db'
+//     df: {'df1': vframes.DataFrame{
+//         name: 'df1'
+//         columns: {'Index': 'BIGINT', 'User Id': 'VARCHAR', 'First Name': 'VARCHAR', 'Last Name': 'VARCHAR', 'Sex': 'VARCHAR', 'Email': 'VARCHAR', 'Phone': 'VARCHAR', 'Date of birth': 'DATE', 'Job Title': 'VARCHAR'}
+//     }}
+// }
+// ```
 pub fn (mut d DataframeContext) load_from_file(name string, filepath string, load_opt LoadOptions) {	
 	load(d.dpath, name, filepath, load_opt)
 	d.df[name] = DataFrame{

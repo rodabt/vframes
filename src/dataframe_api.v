@@ -64,14 +64,17 @@ pub fn (df DataFrame) shape() (int,int) {
 	DATAFRAME I/O
 **/
 
-pub fn load_from_file(name string, filepath string, load_opt LoadOptions) DataFrame {
+pub fn load_from_file(name string, filepath string, load_opt LoadOptions) !DataFrame {
 	mut df := DataFrame{name: name}
-	load(df.db_url, name, filepath, load_opt)
+	result := load(df.db_url, name, filepath, load_opt)
+	if result.exit_code == 1 {
+		panic(result.output)
+	}
 	df.columns = df.get_columns()
 	return df
 }
 
-pub fn tmp_from_file(filepath string, load_opt LoadOptions) DataFrame {
+pub fn tmp_from_file(filepath string, load_opt LoadOptions) !DataFrame {
 	return load_from_file('tmp_${rand.ulid()}', filepath, load_opt)
 }
 
@@ -113,6 +116,16 @@ pub fn (mut df DataFrame) add_column(column_name string, position int, expressio
 	mut cols := df.columns()
 	new_col := '${expression} as ${column_name}'
 	cols.insert(position, new_col)
+	new_cols := cols.join(",")
+	cmd := 'create table ${temp_table} as select ${new_cols} from ${df.name}'
+	execute_raw_nr(df.db_url, cmd)
+	execute_raw_nr(df.db_url, 'drop table ${df.name}; alter table ${temp_table} rename to ${df.name}')
+}
+
+
+pub fn (mut df DataFrame) delete_column(column_name string) {
+	temp_table := 'temp_${rand.ulid()}'
+	cols := df.columns().filter(it != column_name)
 	new_cols := cols.join(",")
 	cmd := 'create table ${temp_table} as select ${new_cols} from ${df.name}'
 	execute_raw_nr(df.db_url, cmd)
