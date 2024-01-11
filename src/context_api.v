@@ -48,7 +48,6 @@ pub fn (mut d DataframeContext) init() map[string]DataFrame {
 // ```v
 // // https://github.com/datablist/sample-csv-files/raw/main/files/people/people-1000.csv 
 // d.load_from_file('df1', 'people-1000.csv')
-// d.load_from_file('df1','people-1000.csv')
 // d
 // vframes.DataframeContext{
 //     dpath: '/tmp/container.db'

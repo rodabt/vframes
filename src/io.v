@@ -24,9 +24,9 @@ fn load(dpath string, name string, filepath string, load_opt LoadOptions) os.Res
 	} else {
 		str_opts := opts.join(',')
 		cmd = if str_opts == '' 
-			{"create or replace table ${name} as select * from read_csv_auto('${full_path}')"}
+			{"create or replace table ${name} as select * from read_csv('${full_path}', auto_detect=true)"}
 		else 
-			{"create or replace table ${name} as select * from read_csv_auto('${full_path}',${str_opts}))"}
+			{"create or replace table ${name} as select * from read_csv('${full_path}',${str_opts}))"}
 	}
 	
 	result := execute(dpath, cmd, [])
