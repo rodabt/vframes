@@ -5,33 +5,32 @@ import x.json2
 
 
 /***
-	CONTEXT CREATION
+	CONTEXT CREATION AND INITIALIZATION
 **/
 
 
 // Creates a new DataFrame context
-
+//
 // A context is a container for multiple DataFrames.
 // It must be initialized before use, and optionally it 
 // accepts a `Config` struct parameter where you can
-// provide the location of the container. 
+// provide a specific location for it. 
 //
 // Example: 
 // ```v
 // import vframes
 
 // mut d := vframes.set_context(dpath: '/tmp/container.db')
-// d.init()
 // ```
 pub fn set_context(config Config) DataframeContext {
 	d := DataframeContext{
 		dpath: config.dpath
 	}
+	_ := new(d.dpath)
 	return d
 }
 
-
-// Inititalizes a DataFrame context
+// Creates the container and returns an empty map of DataFrames
 pub fn (mut d DataframeContext) init() map[string]DataFrame {
 	return *( unsafe { &d.df } )
 }

@@ -6,7 +6,7 @@ import rand
 @[params]
 pub struct Config {
 mut:
-	dpath				string =  os.join_path(os.temp_dir(), 'c_${rand.ulid()}.db')
+	dpath				string =  os.join_path(os.temp_dir(), 'tmp_${rand.ulid()}.db')
 }
 
 @[params]

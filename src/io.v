@@ -6,6 +6,13 @@ import os
 	LOADERS
 **/
 
+// creates a container in dpath if it doesn't exist
+pub fn new(dpath string) os.Result {	
+	full_path := os.abs_path(dpath)
+	result := os.execute('${bin} -s "select 1" ${full_path}')
+	return result
+}
+
 // Load data from `filepath` to DataFrame `name` inside the context
 fn load(dpath string, name string, filepath string, load_opt LoadOptions) os.Result {	
 	full_path := os.abs_path(filepath)
