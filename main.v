@@ -2,10 +2,8 @@ module main
 
 import vduckdb
 import rand
-import x.json2
+import arrays
 
-// TODO: Implement in the future
-type VTable = []map[string]json2.Any
 
 @[params]
 pub struct ContextConfig {
@@ -15,22 +13,27 @@ pub:
 
 @[noinit]
 struct DataFrameContext {
-	dpath				string // os.join_path(os.temp_dir(), 'vf_${rand.ulid()}.db')
+	dpath				string
 mut:	
 	db					vduckdb.DuckDB
 }
 
+struct Step {
+	id					string
+	query				string
+}
+
 @[noinit]
 struct DataFrame {
-	id					string = 'tbl_${rand.ulid()}'
-pub:		
-	size				string
-	shape				[]int
+mut:
+	steps				[]Step
 pub mut:
 	ctx					DataFrameContext
 	display_mode		string = 'box'
 	display_max_rows	int = 100
 }
+
+// TODO: Option to materialize or not (globally or per step)
 
 /***
  
@@ -53,18 +56,6 @@ fn (mut ctx DataFrameContext) close() {
 	ctx.db.close()
 }
 
-/* fn (ctx DataFrameContext) exec(q string) VTable {
-	mut res := ctx.db.query(q) or { panic(err) }
-	res = db.get_array()
-	return res
-}
-
-fn (ctx DataFrameContext) q_string(q string) string {
-	res := ctx.db.exec(q)
-	res = db.get_array()
-	return res
-}*/
-
 /***
  
  DATA INPUT AND OUTPUT
@@ -72,26 +63,15 @@ fn (ctx DataFrameContext) q_string(q string) string {
 ***/
 
 fn (mut ctx DataFrameContext) read_csv(filename string) DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	_ := ctx.db.query("create table ${id} as select * from '${filename}'") or { panic(err) }
-	_ := ctx.db.query("select count(*) as n_rows from ${id}") or { panic(err) }
-	mut res := ctx.db.get_array()
-	num_rows := (res[0]["n_rows"] or {0}).int()
-
-	_ := ctx.db.query("select count(*) as n_cols from information_schema.columns where table_name = '${id}'") or { panic(err) }
-	res = ctx.db.get_array()
-	num_cols := (res[0]["n_cols"] or {0}).int()
-
-	_ := ctx.db.query("pragma database_size") or { panic(err) }
-	res = ctx.db.get_array()
-	size := (res[0]["memory_usage"] or {'0'}).str()
-
-	df := DataFrame{
-		id: id
+	mut df := DataFrame{
 		ctx: ctx
-		shape: [num_rows, num_cols]
-		size: size
 	}
+	tbl := 'tbl_${rand.ulid()}'
+	step := Step{
+		id: tbl
+		query: "select * from '${filename}'"
+	}
+	df.steps << step
 	return df
 }
 
@@ -101,19 +81,32 @@ fn (mut ctx DataFrameContext) read_csv(filename string) DataFrame {
 
 ***/
 
+fn (df DataFrame) base() (string,string) {
+	exps := arrays.map_indexed[Step, string](df.steps, fn (idx int, elem Step) string {
+		return '${elem.id} as (${elem.query})'
+	})
+	last_id := df.steps.last().id
+	q_base := 'WITH ${exps.join(",")}'
+	return last_id, q_base
+}
+
 fn (df DataFrame) head(n int) string {
 	mut db := &df.ctx.db
-	_ := db.query("select * from ${df.id} limit ${n}") or { panic(err) }
+	last_id, q_base := df.base()
+	_ := db.query("${q_base} select * from ${last_id} limit ${n}") or { panic(err) }
 	return db.print_table(max_rows: df.display_max_rows, mode: df.display_mode)
 }
 
 fn (df DataFrame) tail(n int) string {
 	mut db := &df.ctx.db
+	last_id, q_base := df.base()
+	tbl := 'tbl_${rand.ulid()}'
 	q := "
-	WITH base AS (
+	${q_base}, 
+	${tbl} AS (
 		SELECT row_number() OVER() as _row_num,* 
-		FROM ${df.id}
-	) SELECT * EXCLUDE(_row_num) FROM base ORDER BY _row_num DESC limit ${n}
+		FROM ${last_id}
+	) SELECT * EXCLUDE(_row_num) FROM (SELECT * FROM ${tbl} ORDER BY _row_num DESC limit ${n}) ORDER BY _row_num ASC
 	"
 	_ := db.query(q) or { panic(err) }
 	return db.print_table(max_rows: df.display_max_rows, mode: df.display_mode)
@@ -121,39 +114,46 @@ fn (df DataFrame) tail(n int) string {
 
 fn (df DataFrame) info() string {
 	mut db := &df.ctx.db
-	_ := db.query("PRAGMA table_info('${df.id}')") or { panic(err) }
+	last_id, q_base := df.base()
+	_ := db.query("${q_base} SELECT column_name,column_type FROM (DESCRIBE SELECT * FROM ${last_id})") or { panic(err) }
 	return db.print_table(max_rows: df.display_max_rows, mode: df.display_mode)
 }
 
 fn (df DataFrame) describe() string {
 	mut db := &df.ctx.db
-	_ := db.query("SUMMARIZE ${df.id}") or { panic(err) }
+	last_id, q_base := df.base()
+	_ := db.query("${q_base} SELECT * FROM (SUMMARIZE SELECT * FROM ${last_id})") or { panic(err) }
 	return db.print_table(max_rows: df.display_max_rows, mode: df.display_mode)
 }
 
-fn (df DataFrame) query(q string) DataFrame {
-	id := 'tbl_${rand.ulid()}'
+fn (df DataFrame) shape() []int {
 	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select ${q} from ${df.id}") or { panic(err) }
-	_ := db.query("select count(*) as n_rows from ${id}") or { panic(err) } 
-	mut res := db.get_array()
-	num_rows := (res[0]["n_rows"] or {0}).int()
+	last_id, q_base := df.base()
+	_ := db.query('${q_base} SELECT COUNT(*) as rows FROM ${last_id}') or { panic(err) }
+	res_rows := db.get_array()
+	num_rows := (res_rows[0]["rows"] or {0}).int()
 
-	_ := db.query("select count(*) as n_cols from information_schema.columns where table_name = '${id}'") or { panic(err) }
-	res = db.get_array()
-	num_cols := (res[0]["n_cols"] or {0}).int()
+	_ := db.query('${q_base} SELECT COUNT(DISTINCT column_name) as cols FROM (SUMMARIZE SELECT * FROM ${last_id})') or { panic(err) }
+	res_cols := db.get_array()
+	num_cols := (res_cols[0]["cols"] or {0}).int()
+	
+	return [num_rows,num_cols]
+}
 
-	_ := db.query("pragma database_size") or { panic(err) }
-	res = db.get_array()
-	size := (res[0]["memory_usage"] or {'0'}).str()
-	new_df := DataFrame{
-		id: id
+fn (df DataFrame) query(q string) DataFrame {
+	last_id := df.steps.last().id
+	tbl := 'tbl_${rand.ulid()}'
+	mut new_df := DataFrame{
 		ctx: df.ctx
-		shape: [num_rows, num_cols]
-		size: size
+		steps: df.steps 
+	}
+	new_df.steps << Step{
+		id: tbl
+		query: 'select ${q} from ${last_id}'
 	}
 	return new_df
 }
+
 
 /***
  
@@ -162,24 +162,26 @@ fn (df DataFrame) query(q string) DataFrame {
 ***/
 
 
+/** MAIN **/
+
+fn p(msg string, out string) {
+	println("\n${msg}")
+	println(out)
+}
+
+
 fn main() {
-	mut ctx := init(location: 'ctx.db')
+	mut ctx := init() // location: 'ctx.db'
 	df := ctx.read_csv('tmp/people-100.csv')
-	println("First 5 records:")
-	println(df.head(5))
-	println("\nDataFrame info:")
-	println(df.info())
-	println("\nDataFrame shape:")
-    println(df.shape)
-	println("\nDataFrame size:")
-    println(df.size)
-	println("\nTail:")
-    println(df.tail(5))
-	println("\nDescribe:")
-    println(df.describe())
-	println("\nNew dataframe as a result of a query: 'Index*15 as idx, 100 as val'")
-	mut df2 := df.query("Index*15 as idx,100 as val")
-	println("First 5 records:")
-	println(df2.head(10))
+	p("First 5 records:", df.head(5))
+	p("Tail:", df.tail(5))
+	p("DataFrame info:", df.info())
+	p("DataFrame shape:", df.shape().str())
+	// // p("DataFrame size:", df.size)
+	p("Describe:", df.describe())
+	
+	df2 := df.query("Index*15 as idx,100 as val")
+	p("New 10", df2.head(10))
 	ctx.close()
 }
+
