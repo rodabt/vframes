@@ -32,7 +32,10 @@ pub mut:
 	types				[]string
 	dtypes				map[string]string
 	union_by_name		bool
-
+	all_varchar			bool
+	// vframes only
+	row_num				bool
+	debug				bool
 	// Parquet options
 	extra_filename		bool
 	// Record options

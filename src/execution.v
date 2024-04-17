@@ -9,7 +9,7 @@ import io.util
 **/
 
 // Main execution cmd. Return os.Result
-fn execute(filepath string, cmd string, args []string) os.Result {
+pub fn execute(filepath string, cmd string, args []string) os.Result {
 	str_args := args.join(' ')
 	result := os.execute('${bin} ${str_args} -s ${q(cmd)} ${filepath}')
 	return result
@@ -47,10 +47,14 @@ pub fn execute_block(filepath string, cmd string) string {
 pub fn execute_json(filepath string, cmd string) []map[string]json2.Any {
 	mut out := []map[string]json2.Any{}
 	res := os.execute('${bin} -json -s ${q(cmd)} ${filepath}')
-	data_raw := json2.raw_decode(res.output) or { json2.Any('') }
-    rows := data_raw.arr()
-	for row in rows {
-		out << row as map[string]json2.Any
-	}
+	if res.exit_code == 1 {
+		dump(res)
+	} else {
+		data_raw := json2.raw_decode(res.output) or { json2.Any('') }
+		rows := data_raw.arr()
+		for row in rows {
+			out << row as map[string]json2.Any
+		}
+	}	
 	return out
 }

@@ -3,6 +3,7 @@ module vframes
 import os
 import x.json2
 
+// TODO: Catch errors on file missing, query error, and locked database at least
 
 /***
 	CONTEXT CREATION AND INITIALIZATION
