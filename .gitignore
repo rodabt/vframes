@@ -7,6 +7,7 @@ tmp/
 # Ignore common editor/system specific metadata
 .DS_Store
 .vscode/
+docs/
 
 # ENV
 .env
