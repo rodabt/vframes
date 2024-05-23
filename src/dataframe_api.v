@@ -20,6 +20,9 @@ pub fn (df DataFrame) get_columns() map[string]string {
 	// TODO: Return specific data types
 	cmd := "select column_name, data_type from information_schema.columns where table_name='${df.name}'"
 	data_arr := execute_json(df.db_url, cmd)
+	if data_arr.len == 0 {
+		return map[string]string{}
+	}
 	mut cols := map[string]string{}
 	for item in data_arr { 
 		column_name := (item['column_name'] or { json2.Any('') }).str()
@@ -65,6 +68,10 @@ pub fn (df DataFrame) shape() (int,int) {
 **/
 
 pub fn load_from_file(name string, filepath string, load_opt LoadOptions) !DataFrame {
+	if bin == '' {
+		eprintln('ERROR: DUCKDB_PATH not set!')
+		exit(1)
+	}
 	mut df := DataFrame{name: name}
 	result := load(df.db_url, name, filepath, load_opt)
 	if result.exit_code == 1 {

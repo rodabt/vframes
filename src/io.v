@@ -43,8 +43,14 @@ fn load(dpath string, name string, filepath string, load_opt LoadOptions) os.Res
 	if load_opt.skip > 0 {
 		opts << "skip=${load_opt.skip}"
 	}
+	if load_opt.new_line != '' {
+		opts << "new_line='${load_opt.new_line}'"
+	}
 	if load_opt.all_varchar {
 		opts << "all_varchar=true"
+	}
+	if load_opt.skip_empty_columns {
+		args = "nextval('${new_sequence}') as __row_num,columns(col -> col NOT LIKE '_col_%')"
 	}
 	if load_opt.filetype == 'json' {
 		cmd = "create or replace table ${name} as select ${args} from '${full_path}'"

@@ -5,7 +5,7 @@ import rand
 
 @[params]
 pub struct Config {
-mut:
+pub mut:
 	dpath				string =  os.join_path(os.temp_dir(), 'tmp_${rand.ulid()}.db')
 }
 
@@ -36,6 +36,7 @@ pub mut:
 	// vframes only
 	row_num				bool
 	debug				bool
+	skip_empty_columns	bool
 	// Parquet options
 	extra_filename		bool
 	// Record options

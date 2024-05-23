@@ -48,12 +48,15 @@ pub fn execute_json(filepath string, cmd string) []map[string]json2.Any {
 	mut out := []map[string]json2.Any{}
 	res := os.execute('${bin} -json -s ${q(cmd)} ${filepath}')
 	if res.exit_code == 1 {
+		dump(cmd)
 		dump(res)
 	} else {
-		data_raw := json2.raw_decode(res.output) or { json2.Any('') }
-		rows := data_raw.arr()
-		for row in rows {
-			out << row as map[string]json2.Any
+		if res.output.len > 0 {
+			data_raw := json2.raw_decode(res.output) or { json2.Any('') }
+			rows := data_raw.arr()
+			for row in rows {
+				out << row as map[string]json2.Any
+			}
 		}
 	}	
 	return out

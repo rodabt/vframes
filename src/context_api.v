@@ -58,6 +58,10 @@ pub fn (mut d DataframeContext) init() map[string]DataFrame {
 // }
 // ```
 pub fn (mut d DataframeContext) load_from_file(name string, filepath string, load_opt LoadOptions) {	
+	if bin == '' {
+		eprintln('ERROR: DUCKDB_PATH not set!')
+		exit(1)
+	}
 	load(d.dpath, name, filepath, load_opt)
 	d.df[name] = DataFrame{
 		db_url: d.dpath,
