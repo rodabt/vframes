@@ -4,12 +4,20 @@ import vduckdb
 import rand
 import os
 import x.json2
+import v.vmod
 
+type Data = []map[string]json2.Any
 
 @[params]
 pub struct ContextConfig {
 pub:
 	location			string = ":memory:"	
+}
+
+@[params]
+pub struct DFConfig {
+pub mut:
+	to_stdout			bool = true	
 }
 
 @[noinit]
@@ -49,9 +57,14 @@ fn (mut ctx DataFrameContext) close() {
 	ctx.db.close()
 }
 
+pub fn version() string {
+	vm := vmod.decode(@VMOD_FILE) or { panic(err) }
+	return vm.version
+}
+
 /***
  
- DATA INPUT AND OUTPUT
+ DATA I/O
 
 ***/
 
@@ -80,6 +93,10 @@ fn (mut ctx DataFrameContext) read_records(dict []map[string]json2.Any) DataFram
 	}
 }
 
+fn (mut ctx DataFrameContext) data() []map[string]json2.Any {
+	return ctx.db.get_array()
+}
+
 
 /***
  
@@ -87,13 +104,16 @@ fn (mut ctx DataFrameContext) read_records(dict []map[string]json2.Any) DataFram
 
 ***/
 
-fn (df DataFrame) head(n int) string {
+fn (df DataFrame) head(n int, dconf DFConfig) Data {
 	mut db := &df.ctx.db
 	_ := db.query("select * from ${df.id} limit ${n}") or { panic(err) }
-	return db.print_table(max_rows: df.display_max_rows, mode: df.display_mode)
+	if dconf.to_stdout {
+		println(db.print_table(max_rows: df.display_max_rows, mode: df.display_mode))
+	}
+	return db.get_array()
 }
 
-fn (df DataFrame) tail(n int) string {
+fn (df DataFrame) tail(n int, dconf DFConfig) Data {
 	mut db := &df.ctx.db
 	q := "
 	WITH _base as (
@@ -102,19 +122,28 @@ fn (df DataFrame) tail(n int) string {
 	) SELECT * EXCLUDE(_row_num) FROM (SELECT * FROM _base ORDER BY _row_num DESC limit ${n}) ORDER BY _row_num ASC
 	"
 	_ := db.query(q) or { panic(err) }
-	return db.print_table(max_rows: df.display_max_rows, mode: df.display_mode)
+	if dconf.to_stdout {
+		println(db.print_table(max_rows: df.display_max_rows, mode: df.display_mode))
+	}
+	return db.get_array() 
 }
 
-fn (df DataFrame) info() string {
+fn (df DataFrame) info(dconf DFConfig) Data {
 	mut db := &df.ctx.db
 	_ := db.query("SELECT column_name,column_type FROM (DESCRIBE SELECT * FROM ${df.id})") or { panic(err) }
-	return db.print_table(max_rows: df.display_max_rows, mode: df.display_mode)
+	if dconf.to_stdout {
+		println(db.print_table(max_rows: df.display_max_rows, mode: df.display_mode))
+	}
+	return db.get_array()
 }
 
-fn (df DataFrame) describe() string {
+fn (df DataFrame) describe(dconf DFConfig) Data {
 	mut db := &df.ctx.db
 	_ := db.query("SELECT * FROM (SUMMARIZE SELECT * FROM ${df.id})") or { panic(err) }
-	return db.print_table(max_rows: df.display_max_rows, mode: df.display_mode)
+	if dconf.to_stdout {
+		println(db.print_table(max_rows: df.display_max_rows, mode: df.display_mode))
+	}
+	return db.get_array()
 }
 
 fn (df DataFrame) shape() []int {
@@ -194,48 +223,64 @@ fn (df DataFrame) group_by(dimensions []string, metrics map[string]string) DataF
 }
 
 
-/***
- 
- DATA TRANSFORMATION
-
-***/
-
+fn printlne(s string) {
+	println('\n${s}\n')
+}
 
 /** MAIN **/
 
-fn p(msg string, out string) {
-	println("\n${msg}")
-	println(out)
-}
-
 
 fn main() {
-	mut ctx := init() // location: 'ctx.db'
-	df := ctx.read_auto('tmp/people-500000.csv')
-	p("First 5 records:", df.head(5))
-	p("Last 5 records:", df.tail(5))
-	p("DataFrame info:", df.info())
-	p("DataFrame shape:", df.shape().str())
-	// // p("DataFrame size:", df.size)
-	p("Describe:", df.describe())
 	
+	printlne("VFrames version: ${version()}")
+	
+	mut ctx := init() // location: 'ctx.db'
+	
+	printlne("Load 500.000 records from a CSV")
+	df := ctx.read_auto('tmp/people-500000.csv')
+
+	printlne("Print first 5 records:")
+	df.head(5)
+
+	printlne("Assign first 10 records to variable x as []map[string]json2.Any")
+	data := df.head(10, to_stdout: false)
+	println(data)
+	
+	printlne("Print last 5 records:")
+	df.tail(5)
+	
+	printlne("DataFrame info:")
+	df.info()
+	
+	printlne("DataFrame shape: ${df.shape()}")
+	
+	printlne("Describe DataFrame:")
+	df.describe()
+	
+	printlne("Create new DF with new column 'new_col'=Index*5, and select a subset of columns (Email, Phone, new_col):")
 	df2 := df
 		.add_column('new_col', 'Index*5')
-		.subset(['Email','Phone','new_col'])
-	p("Create new DF with new column 'new_col'=Index*5, and select a subset of columns (Email, Phone, new_col):", df2.head(10))
+		.subset(['Email','Phone','new_col'])	
+	df2.head(10)
 
+	printlne("Delete Email from new DF:")
 	df3 := df2.delete_column('Email')
-	p("Delete Email from new DF:", df3.head(10))
+	df3.head(10)
 
+	printlne("Load parquet (Titanic):")
 	df4 := ctx.read_auto('tmp/titanic.parquet')
-	p("Load parquet (Titanic):", df4.head(10))
-	p("Describe:", df4.describe())
+	df4.head(10)
+	
+	printlne("Describe:")
+	df4.describe()
 
+	printlne("Average of Age and Fare by Sex:")
 	df5 := df4.group_by(['Sex'],{"age_avg": "avg(Age)", "avg_fare": "avg(Fare)"})
-	p("Average of Age and Fare by Sex:", df5.head(10))
+	df5.head(10)
 
+	printlne("Slice(2,3) of first DataFrame:")
 	df6 := df.slice(2,3)
-	p("Slice(2,3) of first DF:", df6.head(10))
+	df6.head(10)
 
 	ctx.close()
 }

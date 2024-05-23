@@ -1,40 +1,71 @@
 # vframes
 
-A DataFrame interface that relies on duckdb. Should work on Linux, Windows and Mac
+A DataFrame library inspired by Python's Pandas. Should work on Linux, Windows and Mac (still testing)
+
+## Installation
+
+```bash
+v install rodabt.vduckdb
+v install rodabt.vframes
+```
 
 ## Basic usage example
 
 ```v
-import vframes
+import rodabt.vframes
 import x.json2
 
 fn main() {
+    printlne("VFrames version: ${version()}")
 
-    // Load default configuration options
-	opt := vframes.LoadOptions{}
+    mut ctx := init() // location: 'ctx.db'
 
-    // Load from file (autoguess format)
-    mut df := vframes.load_from_file('example', 'people-1000.csv', opt)!
-    
-    println(df.columns())
-    println(df.head(n: 5))
-    println(df.describe())
-    println(df.info())
-    println(df.shape())
+    printlne("Load 500.000 records from a CSV")
+    df := ctx.read_auto('tmp/people-500000.csv')
 
-    // Load from json array
-    mut data := []map[string]json2.Any{}
-    data << {'x': json2.Any(10), 'y': 5, 'z': 'test'}
-    data << {'x': json2.Any(3), 'y': 6, 'z': 'test2'}
-    df = vframes.load_from_records('df2', data)
-    println(df.head(n: 5))
+    printlne("Print first 5 records:")
+    df.head(5)
 
-    df.add_column('w', 0, 'x * y + 10')
-    println(df.head(n: 5))
-    println(df.to_records())  // []map[string]json2.Any
+    printlne("Assign first 10 records to variable x as []map[string]json2.Any")
+    data := df.head(10, to_stdout: false)
+    println(data)
 
-    defer {
-        df.close()
-    }
+    printlne("Print last 5 records:")
+    df.tail(5)
+
+    printlne("DataFrame info:")
+    df.info()
+
+    printlne("DataFrame shape: ${df.shape()}")
+
+    printlne("Describe DataFrame:")
+    df.describe()
+
+    printlne("Create new DF with new column 'new_col'=Index*5, and select a subset of columns (Email, Phone, new_col):")
+    df2 := df
+        .add_column('new_col', 'Index*5')
+        .subset(['Email','Phone','new_col'])
+    df2.head(10)
+
+    printlne("Delete Email from new DF:")
+    df3 := df2.delete_column('Email')
+    df3.head(10)
+
+    printlne("Load parquet (Titanic):")
+    df4 := ctx.read_auto('tmp/titanic.parquet')
+    df4.head(10)
+
+    printlne("Describe:")
+    df4.describe()
+
+    printlne("Average of Age and Fare by Sex:")
+    df5 := df4.group_by(['Sex'],{"age_avg": "avg(Age)", "avg_fare": "avg(Fare)"})
+    df5.head(10)
+
+    printlne("Slice(2,3) of first DataFrame:")
+    df6 := df.slice(2,3)
+    df6.head(10)
+
+    ctx.close()
 }
 ```
