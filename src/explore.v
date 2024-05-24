@@ -1,5 +1,7 @@
 module vframes
 
+import x.json2
+
 // Shows first `n` records from DataFrame. Use `to_stdout: false` to return the data as `[]map[string]json2.Any` instead of the console
 // Example:
 // ```v
@@ -77,4 +79,26 @@ pub fn (df DataFrame) query(q string, dconf DFConfig) !Data {
 		println(db.print_table(max_rows: df.display_max_rows, mode: df.display_mode))
 	}
 	return db.get_array()
+}
+
+// Returns all the data from DataFrame as []map[string]json2.Any
+// NOTE: Use with caution because it will dump all the DataFrame data to memory
+pub fn (df DataFrame) values() []map[string]json2.Any {
+	mut db := &df.ctx.db
+	_ := db.query('SELECT * FROM ${df.id}') or { panic(err) }
+	return df.ctx.db.get_array()
+}
+
+// Returns an array of column names
+pub fn (df DataFrame) columns() []string {
+	mut db := &df.ctx.db
+	_ := db.query('SELECT * FROM ${df.id} where 1=0') or { panic(err) }
+	return df.ctx.db.columns.keys()
+}
+
+// Returns a map of columns and their types
+pub fn (df DataFrame) dtypes() map[string]string {
+	mut db := &df.ctx.db
+	_ := db.query('SELECT * FROM ${df.id} where 1=0') or { panic(err) }
+	return df.ctx.db.columns
 }

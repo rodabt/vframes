@@ -11,10 +11,10 @@ docs/
 
 # ENV
 .env
-Makefile
 
 # Local databases
 *.db
 
 # Reserved files
 TODO.md
+Makefile

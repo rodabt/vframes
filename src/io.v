@@ -36,9 +36,3 @@ pub fn (mut ctx DataFrameContext) read_records(dict []map[string]json2.Any) Data
 		ctx: ctx
 	}
 }
-
-// Returns all the data from DataFrame as []map[string]json2.Any
-// NOTE: Use with caution because it will dump all the DataFrame data to memory
-fn (mut ctx DataFrameContext) data() []map[string]json2.Any {
-	return ctx.db.get_array()
-}
