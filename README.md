@@ -1,10 +1,12 @@
 # vframes 0.1.0
 
-A DataFrame library inspired by Python's Pandas. Should work on Linux, Windows and Mac (still testing)
+A DataFrame library inspired by Python's Pandas. Should work on Linux, Windows and Mac (still testing). Uses the powerful DuckDB database as a backend.
+
+This is still a WIP. More functions, documentation, tutorials, and examples will be added soon.
 
 ## Dependencies
 
-VDuckDB (https://github.com/rodabt/vduckdb)
+[VDuckDB wrapper library](https://github.com/rodabt/vduckdb)
 
 ## Installation
 
@@ -29,8 +31,8 @@ fn main() {
 
     printlne("VFrames version: ${vframes.version()}")
 
-    printlne("Initialize context in memory")
-    mut ctx := vframes.init() // also you can provide a fixed location, i.e. 'ctx.db'
+    printlne("First initialize a new context. If no arguments are give, memory is used")
+    mut ctx := vframes.init()
     
     printlne("Load 500.000 records from a CSV")
     df := ctx.read_auto('people-500000.csv')!
@@ -91,3 +93,31 @@ fn main() {
     ctx.close()
 }
 ```
+
+## Considerations
+
+- VFrames uses DuckDB under the hood through the VDuckDB wrapper library, so in theory all operations allowed by DuckDB should be supported by VFrames eventually.
+- Currently by design DataFrames are inmutable, so when mutating you should create a new DataFrame to store each new result
+
+## Initial settings
+
+### DataFrameContext
+
+To use the library you must first initialize a DataFrame to define which kind of storage you will use for DataFrames, like this:
+
+```v
+mut ctx := vframes.init()                               // In memory
+mut ctx := vframes.init(location: 'mycontext.db')       // Persisted to 'mycontext.db'
+```
+
+### DataFrame
+
+If you want to suppress console output for functions returning `Data`, set the optional parameter `to_stdout` to `false` (see examples dir).
+
+## Accepted data file formats
+
+The structure of most CSV, Parquet, and JSON files is infered automatically. In the future, there will be options to fine tune loading parameters such as delimiters, column renames, partial loading, etc.
+
+## How to contribute
+
+Comments, bug reports, and pull requests are welcome.

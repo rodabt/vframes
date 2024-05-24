@@ -11,6 +11,7 @@ docs/
 
 # ENV
 .env
+Makefile
 
 # Local databases
 *.db
