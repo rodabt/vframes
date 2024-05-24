@@ -15,10 +15,7 @@ v install rodabt.vframes
 
 ## Basic usage example
 
-Before running the example please be sure to download the following files:
-
-- people-500000.csv (https://drive.google.com/uc?id=1gYcKeeF2KIx3jHsn-Egc_zjv-VaI4LFw&export=download)
-- titanic.parquet (https://www.timestored.com/data/sample/titanic.parquet)
+Make sure the files people-500000.csv, titanic.parquet, and data.json are in the same directory as your .v file (check the examples dir)
 
 ```v
 import rodabt.vframes
@@ -82,8 +79,8 @@ fn main() {
     df6.head(10)
     
     println("Reading a JSON file:")
-    df7 := ctx.read_auto("data.json")
-    df7.head()
+    df7 := ctx.read_auto("data.json")!
+    df7.head(10)
 
     printlne("Error control: try to load a non valid file")
     _ := ctx.read_auto('no_valid.csv') or { 
