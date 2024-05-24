@@ -118,6 +118,29 @@ If you want to suppress console output for functions returning `Data`, set the o
 
 The structure of most CSV, Parquet, and JSON files is infered automatically. In the future, there will be options to fine tune loading parameters such as delimiters, column renames, partial loading, etc.
 
+## Current functions
+
+Last updated on 2024-05-24.
+
+- [X] columns
+- [X] dtypes
+- [X] info
+- [X] values
+- [X] shape
+- [X] empty
+- [X] head
+- [X] tail
+- [X] query
+- [X] groupby
+
+## Roadmap
+
+Although the library is very inspired by Pandas, **it's purpose is NOT to be a one-on-one replacement**. Some of the funcionalities planned are listed below:
+
+- [ ] DataFrame joins
+- [ ] Query deferral
+- [ ] Basic plotting
+
 ## How to contribute
 
-Comments, bug reports, and pull requests are welcome.
+Comments, bug reports, requests, and pull requests are welcome.
