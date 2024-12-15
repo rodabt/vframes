@@ -1,4 +1,4 @@
-import rodabt.vframes
+import vframes
 
 fn printlne(s string) {
 	println('\n${s}\n')
@@ -59,7 +59,7 @@ fn main() {
 
     println("Reading a JSON file:")
     df7 := ctx.read_auto("data.json")!
-    df7.head(10)	
+    df7.head(100)	
 
 	printlne("Error control: try to load a non valid file")
 	_ := ctx.read_auto('no_valid.csv') or { 

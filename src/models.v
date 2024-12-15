@@ -9,19 +9,19 @@ type Data = []map[string]json2.Any
 @[params]
 pub struct ContextConfig {
 pub:
-	location			string = ":memory:"	
+	location			string = ":memory:"
 }
 
 @[params]
 pub struct DFConfig {
 pub mut:
-	to_stdout			bool = true	
+	to_stdout			bool = true
 }
 
 @[noinit]
 struct DataFrameContext {
 	dpath				string
-mut:	
+mut:
 	db					vduckdb.DuckDB
 }
 

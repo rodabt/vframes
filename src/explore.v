@@ -9,16 +9,22 @@ import x.json2
 // new_df := df.head(10, to_stdout: false)  	// Assigns the result as []map[string]json2.Any to new_df
 // ```
 pub fn (df DataFrame) head(n int, dconf DFConfig) Data {
+	if n <= 0 {
+		return Data([]map[string]json2.Any{})
+	}
 	mut db := &df.ctx.db
 	_ := db.query("select * from ${df.id} limit ${n}") or { panic(err) }
 	if dconf.to_stdout {
 		println(db.print_table(max_rows: df.display_max_rows, mode: df.display_mode))
 	}
-	return db.get_array()
+	return Data(db.get_array())
 }
 
 // Same as `head`, but for last `n`records
 pub fn (df DataFrame) tail(n int, dconf DFConfig) Data {
+	if n <= 0 {
+		return Data([]map[string]json2.Any{})
+	}	
 	mut db := &df.ctx.db
 	q := "
 	WITH _base as (
@@ -65,20 +71,6 @@ pub fn (df DataFrame) shape() []int {
 	num_cols := (res_cols[0]["cols"] or {0}).int()
 	
 	return [num_rows,num_cols]
-}
-
-// Allows you to use a valid sql expression with the DataFrame. It returns a Data Result.
-// Examples: `df.query("value*2 as new_value, lower(name) as lowercase_name")`
-pub fn (df DataFrame) query(q string, dconf DFConfig) !Data {
-	mut db := &df.ctx.db
-	_ := db.query('SELECT ${q} FROM ${df.id}') or { 
-		eprintln("Invalid query syntax: ${err.msg()}")
-		exit(1)	
-	}
-	if dconf.to_stdout {
-		println(db.print_table(max_rows: df.display_max_rows, mode: df.display_mode))
-	}
-	return db.get_array()
 }
 
 // Returns all the data from DataFrame as []map[string]json2.Any

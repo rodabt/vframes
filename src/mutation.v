@@ -62,3 +62,19 @@ pub fn (df DataFrame) group_by(dimensions []string, metrics map[string]string) D
 		ctx: df.ctx
 	}
 }
+
+
+// Allows you to use a valid sql expression with the DataFrame. It returns a DataFrame Result
+// Examples: `df.query("value*2 as new_value, lower(name) as lowercase_name")`
+pub fn (df DataFrame) query(q string, dconf DFConfig) !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	_ := db.query('SELECT ${q} FROM ${df.id}') or { 
+		eprintln("Invalid query syntax: ${err.msg()}")
+		exit(1)	
+	}
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
+}
