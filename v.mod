@@ -3,5 +3,5 @@ Module {
 	description: 'DataFrames for V'
 	version: '0.1.1'
 	license: 'MIT'
-	dependencies: ['vduckdb']
+	dependencies: ['https://github.com/rodabt/vduckdb']
 }
