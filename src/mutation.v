@@ -71,8 +71,30 @@ pub fn (df DataFrame) query(q string, dconf DFConfig) !DataFrame {
 	mut db := &df.ctx.db
 	_ := db.query('SELECT ${q} FROM ${df.id}') or { 
 		eprintln("Invalid query syntax: ${err.msg()}")
-		exit(1)	
+		return error("Invalid query syntax: ${err.msg()}")	
 	}
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
+}
+
+// Adds prefix `prefix` to every column
+pub fn (df DataFrame) add_prefix(prefix string) DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	_ := db.query("create table ${id} as select columns('(.*)') as '${prefix}_\\1' from ${df.id}") or { panic(err) }
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
+}
+
+// Adds suffix `suffix` to every column
+pub fn (df DataFrame) add_suffix(suffix string) DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	_ := db.query("create table ${id} as select columns('(.*)') as '\\1_${suffix}' from ${df.id}") or { panic(err) }
 	return DataFrame{
 		id: id
 		ctx: df.ctx

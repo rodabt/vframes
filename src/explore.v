@@ -6,7 +6,7 @@ import x.json2
 // Example:
 // ```v
 // df.head(10) 									// Prints the first 10 records to console
-// new_df := df.head(10, to_stdout: false)  	// Assigns the result as []map[string]json2.Any to new_df
+// data := df.head(10, to_stdout: false)  		// Assigns the result as []map[string]json2.Any to data
 // ```
 pub fn (df DataFrame) head(n int, dconf DFConfig) Data {
 	if n <= 0 {
@@ -75,7 +75,7 @@ pub fn (df DataFrame) shape() []int {
 
 // Returns all the data from DataFrame as []map[string]json2.Any
 // NOTE: Use with caution because it will dump all the DataFrame data to memory
-pub fn (df DataFrame) values() []map[string]json2.Any {
+pub fn (df DataFrame) values() Data {
 	mut db := &df.ctx.db
 	_ := db.query('SELECT * FROM ${df.id}') or { panic(err) }
 	return df.ctx.db.get_array()

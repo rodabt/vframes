@@ -2,7 +2,7 @@ module vframes
 
 import rand
 import x.json2
-import rodabt.vduckdb
+import vduckdb
 
 type Data = []map[string]json2.Any
 

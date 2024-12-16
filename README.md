@@ -20,7 +20,7 @@ v install rodabt.vframes
 Make sure the files people-500000.csv, titanic.parquet, and data.json are in the same directory as your .v file (check the examples dir)
 
 ```v
-import rodabt.vframes
+import vframes
 
 // A convenience function for better printing
 fn printlne(s string) {
@@ -120,18 +120,27 @@ The structure of most CSV, Parquet, and JSON files is infered automatically. In 
 
 ## Current functions
 
-Last updated on 2024-05-24.
+Last updated on 2024-12-15.
 
 - [X] columns
 - [X] dtypes
-- [X] info
-- [X] values
-- [X] shape
 - [X] empty
-- [X] head
-- [X] tail
-- [X] query
 - [X] groupby
+- [X] head
+- [X] info
+- [X] query
+- [X] shape
+- [X] tail
+- [X] values
+- [X] abs
+- [X] add
+- [X] add_prefix
+- [X] add_suffix
+- [X] max
+- [X] min
+- [X] mean
+- [X] median
+- [X] sum
 
 ## Roadmap
 

@@ -1,6 +1,6 @@
 module vframes
 
-import rodabt.vduckdb
+import vduckdb
 import rand
 import v.vmod
 
