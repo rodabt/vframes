@@ -11,8 +11,8 @@ This is still a WIP. More functions, documentation, tutorials, and examples will
 ## Installation
 
 ```bash
-v install rodabt.vduckdb
-v install rodabt.vframes
+v install https://github.com/rodabt/vduckdb
+v install https://github.com/rodabt/vframes
 ```
 
 ## Basic usage example
