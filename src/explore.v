@@ -73,24 +73,32 @@ pub fn (df DataFrame) shape() []int {
 	return [num_rows,num_cols]
 }
 
-// Returns all the data from DataFrame as []map[string]json2.Any
+@[params]
+struct ValuesParams {
+	as_string		bool
+}
+
+// Returns all the data from DataFrame as []map[string]json2.Any or []map[string]string if `as_string` is true
 // NOTE: Use with caution because it will dump all the DataFrame data to memory
-pub fn (df DataFrame) values() Data {
+pub fn (df DataFrame) values(vp ValuesParams) Data {
 	mut db := &df.ctx.db
 	_ := db.query('SELECT * FROM ${df.id}') or { panic(err) }
-	return df.ctx.db.get_array()
+	if vp.as_string {
+		return db.get_array_as_string()
+	}
+	return db.get_array()
 }
 
 // Returns an array of column names
 pub fn (df DataFrame) columns() []string {
 	mut db := &df.ctx.db
 	_ := db.query('SELECT * FROM ${df.id} where 1=0') or { panic(err) }
-	return df.ctx.db.columns.keys()
+	return db.columns.keys()
 }
 
 // Returns a map of columns and their types
 pub fn (df DataFrame) dtypes() map[string]string {
 	mut db := &df.ctx.db
 	_ := db.query('SELECT * FROM ${df.id} where 1=0') or { panic(err) }
-	return df.ctx.db.columns
+	return db.columns
 }

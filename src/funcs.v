@@ -3,12 +3,16 @@ module vframes
 import rand
 
 // Internal: Apply function 'func' to numeric values
-fn (df DataFrame) v_apply(func string) !DataFrame {
+fn (df DataFrame) v_apply(func string, args ...string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
 	for k,v in df.dtypes() {
-		cols << if v in ['integer','decimal','float','bigint','double','hugeint'] { '${func}("${k}") as "${k}"'} else { k }
+		if v in ['integer','decimal','float','bigint','double','hugeint'] {
+			cols <<  if args.len > 0 { '${func}("${k}",${args.join(',')}) as "${k}"' } else { '${func}("${k}") as "${k}"' }
+		} else {
+			cols << k
+		}
 	} 
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}")!
 	return DataFrame{
@@ -110,6 +114,12 @@ pub fn (df DataFrame) median(fo FuncOptions) DataFrame {
 // Calculates the sum for each of the rows (`axis: 0`) or columns (`axis: 1`. default) of the DataFrame
 pub fn (df DataFrame) sum(fo FuncOptions) DataFrame {
 	new_df := df.g_apply('sum', fo)
+	return new_df
+}
+
+// Calculates the exponential power (`element^n`) for each element of the Dataframe
+pub fn (df DataFrame) pow(n int, fo FuncOptions) DataFrame {
+	new_df := df.v_apply('pow', n.str()) or { panic(err) }
 	return new_df
 }
 

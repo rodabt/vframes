@@ -1,4 +1,4 @@
-# vframes 0.1.1
+# vframes 0.1.2
 
 A DataFrame library inspired by Python's Pandas. Should work on Linux, Windows and Mac (still testing). Uses the powerful DuckDB database as a backend.
 
@@ -120,7 +120,7 @@ The structure of most CSV, Parquet, and JSON files is infered automatically. In 
 
 ## Current functions
 
-Last updated on 2024-12-15
+Last updated on 2024-12-21
 
 - [X] columns
 - [X] dtypes
@@ -141,6 +141,8 @@ Last updated on 2024-12-15
 - [X] mean
 - [X] median
 - [X] sum
+- [X] dropna
+- [X] pow
 
 ## Roadmap
 

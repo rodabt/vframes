@@ -66,11 +66,11 @@ fn test__mean() {
 }
 
 fn test__median() {
-	d := Data([
+	d := [
 		{"x": json2.Any(-10.3),"y": json2.Any(-50000),"z": json2.Any('a')},
 		{"x": json2.Any(-1),"y": json2.Any(0),"z": json2.Any('b')},
 		{"x": json2.Any(2),"y": json2.Any(-3),"z": json2.Any('c')}
-	]) 
+	]
 	mut df := df_init(d)
 	result := Data([
 		{"x": json2.Any(-1), "y": json2.Any(-3) }
@@ -79,14 +79,29 @@ fn test__median() {
 }
 
 fn test__sum() {
-	d := Data([
+	d := [
 		{"x": json2.Any(10),"y": json2.Any(14),"z": json2.Any('a')},
 		{"x": json2.Any(4),"y": json2.Any(10),"z": json2.Any('b')},
 		{"x": json2.Any(2),"y": json2.Any(15),"z": json2.Any('c')}
-	]) 
+	] 
 	mut df := df_init(d)
 	result := Data([
 		{"x": json2.Any(16), "y": json2.Any(39) }
 	])
 	assert df.sum().values().str() == result.str()
+}
+
+fn test__pow() {
+	d := [
+		{"x": json2.Any(10),"y": json2.Any(14),"z": json2.Any('a')},
+		{"x": json2.Any(4),"y": json2.Any(10),"z": json2.Any('b')},
+		{"x": json2.Any(2),"y": json2.Any(15),"z": json2.Any('c')}
+	] 
+	mut df := df_init(d)
+	result := Data([
+		{"x": json2.Any(100),"y": json2.Any(196),"z": json2.Any('a')},
+		{"x": json2.Any(16),"y": json2.Any(100),"z": json2.Any('b')},
+		{"x": json2.Any(4),"y": json2.Any(225),"z": json2.Any('c')}
+	])
+	assert df.pow(2).values().str() == result.str()
 }

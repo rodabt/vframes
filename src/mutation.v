@@ -100,3 +100,28 @@ pub fn (df DataFrame) add_suffix(suffix string) DataFrame {
 		ctx: df.ctx
 	}
 }
+
+@[params]
+struct DropOptions {
+	axis		int  			// 0: drop rows, 1: drop columns	
+	how			string = 'any'	// 'any': drop if any NA values, 'all': drop if all NA values
+	thresh		int				// Minimum number of non-NA values to keep
+	subset		[]string 		// Subset of columns to consider
+	nullstr	    string = 'null'
+}
+
+// Drops NA rows or columns from DataFrame. If how is 'any', it drops the row/column if any NA values are present. 
+// If how is 'all', it drops the row/column if all NA values are present
+// If subset is passed, it only considers the columns passed in the subset as final columns for output
+pub fn (df DataFrame) dropna(do DropOptions) DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	selected_columns := if do.subset.len > 0 { do.subset } else { df.columns() }
+	conn := if do.how == 'any' { 'and' } else { 'or' }
+	predicate := df.columns().map("${it} is not null").join(' ${conn} ')
+	_ := db.query("create table ${id} as select ${selected_columns.join(',')} from ${df.id} where ${predicate}") or { panic(err) }	
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
+}

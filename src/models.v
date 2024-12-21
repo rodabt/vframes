@@ -4,7 +4,7 @@ import rand
 import x.json2
 import vduckdb
 
-type Data = []map[string]json2.Any
+type Data = []map[string]json2.Any | []map[string]string
 
 @[params]
 pub struct ContextConfig {
