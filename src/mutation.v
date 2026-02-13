@@ -102,7 +102,7 @@ pub fn (df DataFrame) add_suffix(suffix string) DataFrame {
 }
 
 @[params]
-struct DropOptions {
+pub struct DropOptions {
 	axis		int  			// 0: drop rows, 1: drop columns	
 	how			string = 'any'	// 'any': drop if any NA values, 'all': drop if all NA values
 	thresh		int				// Minimum number of non-NA values to keep

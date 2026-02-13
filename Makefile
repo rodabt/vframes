@@ -5,3 +5,6 @@ link:
 
 docs:
 	VDOC_SORT=false v doc -comments -color -f html -m vframes -o docs -readme -inline-assets
+
+test:
+	v test tests/
