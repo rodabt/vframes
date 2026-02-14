@@ -2,6 +2,8 @@
 
 This tutorial provides a side-by-side comparison of VFrames with Pandas, helping Python developers quickly adopt VFrames.
 
+> **Tip:** Standalone runnable examples are available in the `examples/` directory.
+
 ## Table of Contents
 
 1. [Initialization](#initialization)
@@ -24,12 +26,17 @@ This tutorial provides a side-by-side comparison of VFrames with Pandas, helping
 
 ```v
 import vframes
+import x.json2
 
-// In-memory DataFrame
-mut ctx := vframes.init()
+fn main() {
+    // In-memory DataFrame
+    mut ctx := vframes.init()
 
-// Persisted to file
-mut ctx := vframes.init(location: 'mydata.db')
+    // ... work with DataFrames ...
+
+    // Always close when done
+    ctx.close()
+}
 ```
 
 ### Pandas
@@ -39,9 +46,6 @@ import pandas as pd
 
 # In-memory DataFrame
 df = pd.DataFrame()
-
-# From file
-df = pd.read_pickle('mydata.pkl')
 ```
 
 ---
@@ -51,15 +55,24 @@ df = pd.read_pickle('mydata.pkl')
 ### VFrames
 
 ```v
-// Auto-detect format (CSV, JSON, Parquet)
-df := ctx.read_auto('data.csv')!
+import vframes
+import x.json2
 
-// From records
-data := [
-    {"name": "Alice", "age": 30},
-    {"name": "Bob", "age": 25}
-]
-df := ctx.read_records(data)!
+fn main() {
+    mut ctx := vframes.init()
+
+    // Auto-detect format (CSV, JSON, Parquet)
+    df := ctx.read_auto('data.csv')!
+
+    // From records (requires x.json2)
+    data := [
+        {"name": json2.Any("Alice"), "age": json2.Any(30)},
+        {"name": json2.Any("Bob"), "age": json2.Any(25)}
+    ]
+    df := ctx.read_records(data)!
+
+    ctx.close()
+}
 ```
 
 ### Pandas
@@ -85,31 +98,51 @@ df = pd.DataFrame(data)
 ### VFrames
 
 ```v
-// First 5 rows
-df.head(5)
+import vframes
+import x.json2
 
-// Last 5 rows  
-df.tail(5)
+fn main() {
+    mut ctx := vframes.init()
+    
+    // Load data
+    data := [
+        {"name": json2.Any("Alice"), "age": json2.Any(30)},
+        {"name": json2.Any("Bob"), "age": json2.Any(25)}
+    ]
+    df := ctx.read_records(data)!
 
-// Shape (rows, columns)
-shape := df.shape()  // returns [rows, cols]
+    // First 5 rows
+    df.head(5)
 
-// Column names
-cols := df.columns()
+    // Last 5 rows
+    df.tail(5)
 
-// Data types
-dtypes := df.dtypes()
+    // Shape (rows, columns)
+    println('Shape: ${df.shape()}')
 
-// Summary statistics
-df.describe()
+    // Column names
+    println('Columns: ${df.columns()}')
 
-// Full info
-df.info()
+    // Data types
+    println('Dtypes: ${df.dtypes()}')
+
+    // Summary statistics
+    df.describe()
+
+    // Full info
+    df.info()
+
+    ctx.close()
+}
 ```
 
 ### Pandas
 
 ```python
+import pandas as pd
+
+df = pd.read_csv('data.csv')
+
 # First 5 rows
 df.head(5)
 
@@ -142,7 +175,7 @@ df.info()
 // Select specific columns
 df2 := df.select(['name', 'age'])
 
-// Select subset with new column
+// Or use subset
 df2 := df.subset(['name', 'age'])
 
 // Add prefix/suffix
@@ -172,7 +205,7 @@ df2 = df.add_suffix('_col')
 df2 := df.filter('age', '> 25')!
 
 // Query with SQL-like syntax
-df2 := df.query('age > 25', vframes.DFConfig{})!
+df2 := df.query('age > 25')!
 
 // Isin filter (create boolean mask)
 mask := df.isin(['Alice', 'Bob'])!
@@ -363,7 +396,7 @@ df2 := df.dropna(vframes.DropOptions{
 
 // Fill NA with value
 df2 := df.fillna(vframes.FillnaOptions{
-    value: '0'
+    value: "'0'"  // Note: string values need quotes
 })
 
 // Forward fill
@@ -397,6 +430,82 @@ mask = df.isna()
 
 ---
 
+## Complete Example
+
+### VFrames
+
+```v
+import vframes
+import x.json2
+
+fn main() {
+    // Initialize context
+    mut ctx := vframes.init()
+
+    // Create DataFrame from records
+    data := [
+        {"name": json2.Any("Alice"), "age": json2.Any(30), "city": json2.Any("NYC")},
+        {"name": json2.Any("Bob"), "age": json2.Any(25), "city": json2.Any("LA")},
+        {"name": json2.Any("Charlie"), "age": json2.Any(35), "city": json2.Any("NYC")}
+    ]
+    df := ctx.read_records(data)!
+
+    // Explore
+    println('First 2 rows:')
+    df.head(2)
+
+    println('Shape: ${df.shape()}')
+
+    // Add column
+    df2 := df.add_column('age_plus_10', 'age + 10')
+
+    // Filter
+    df3 := df2.filter('age', '> 28')!
+
+    // Sort
+    df4 := df3.sort_values(['name'], vframes.SortValuesOptions{})
+
+    // Export
+    df4.to_csv('output.csv', vframes.ToCsvOptions{})!
+
+    // Clean up
+    ctx.close()
+}
+```
+
+### Pandas
+
+```python
+import pandas as pd
+
+# Create DataFrame
+data = [
+    {"name": "Alice", "age": 30, "city": "NYC"},
+    {"name": "Bob", "age": 25, "city": "LA"},
+    {"name": "Charlie", "age": 35, "city": "NYC"}
+]
+df = pd.DataFrame(data)
+
+# Explore
+print('First 2 rows:')
+print(df.head(2))
+print(f'Shape: {df.shape}')
+
+# Add column
+df['age_plus_10'] = df['age'] + 10
+
+# Filter
+df = df[df['age'] > 28]
+
+# Sort
+df = df.sort_values(by=['name'])
+
+# Export
+df.to_csv('output.csv', index=False)
+```
+
+---
+
 ## Common Operations Comparison
 
 | Operation | VFrames | Pandas |
@@ -412,32 +521,38 @@ mask = df.isna()
 | Delete | `df.delete_column('col')` | `df.drop(columns=['col'])` |
 | Rename | `df.rename({...})` | `df.rename(columns={...})` |
 | Group by | `df.group_by([...], {...})` | `df.groupby(...).agg(...)` |
-| Sort | `df.sort_values([...])` | `df.sort_values(by=[...])` |
+| Sort | `df.sort_values([...], opts)` | `df.sort_values(by=[...])` |
 | Merge | `df1.merge(df2, {...})` | `pd.merge(df1, df2, ...)` |
 | Fill NA | `df.fillna({...})` | `df.fillna(...)` |
 | Export CSV | `df.to_csv(...)` | `df.to_csv(...)` |
 
 ---
 
-## Error Handling
+## Important Notes
 
-VFrames uses V's error handling with `!` and `or` blocks:
+1. **Always close the context**:
+   ```v
+   ctx.close()
+   ```
 
-```v
-df := ctx.read_auto('file.csv') or {
-    eprintln('Failed to load: ${err.msg()}')
-    return
-}
+2. **Use `json2.Any`** for data values:
+   ```v
+   {"name": json2.Any("Alice"), "age": json2.Any(30)}
+   ```
 
-// Or with default value
-df := ctx.read_auto('file.csv') or { vframes.empty() }
-```
+3. **Error handling** with `!` and `or`:
+   ```v
+   df := ctx.read_auto('file.csv') or {
+       eprintln('Failed: ${err.msg()}')
+       return
+   }
+   ```
 
 ---
 
 ## Performance Tips
 
-1. **Use Persisted Context**: For large datasets, use persisted context:
+1. **Use Persisted Context**: For large datasets:
    ```v
    mut ctx := vframes.init(location: 'data.db')
    ```
@@ -447,18 +562,10 @@ df := ctx.read_auto('file.csv') or { vframes.empty() }
    df := ctx.read_auto('data.csv')!
        .add_column('new_col', 'old_col * 2')!
        .filter('new_col', '> 100')!
-       .sort_values(['new_col'], SortValuesOptions{})
+       .sort_values(['new_col'], vframes.SortValuesOptions{})
    ```
 
-3. **Use SQL Directly**: For complex operations, use `query()`:
+3. **Use SQL Directly**: For complex operations:
    ```v
-   df2 := df.query('SELECT col1, SUM(col2) as total GROUP BY col1', DFConfig{})!
+   df2 := df.query('SELECT col1, SUM(col2) as total GROUP BY col1')!
    ```
-
----
-
-## Next Steps
-
-- Check [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md) for available functions
-- Explore [examples/](examples/) for more use cases
-- Contribute by adding new functions or fixing bugs

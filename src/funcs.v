@@ -429,7 +429,7 @@ pub fn (df DataFrame) isnull() !DataFrame {
 @[params]
 pub struct FillnaOptions {
 	value		string = '0'	// Value to fill NA with (can be a string for SQL expression)
-	method		string = ''		// 'ffill' for forward fill, 'bfill' for backward fill
+	method		string			// 'ffill' for forward fill, 'bfill' for backward fill
 	limit		int				// Maximum number of consecutive NA values to fill
 }
 
@@ -718,7 +718,7 @@ pub fn (df DataFrame) cov() !DataFrame {
 pub struct RollingOptions {
 	window int = 3 // window size
 	min_periods int = 1 // minimum number of observations
-	center bool = false // center the window
+	center bool // center the window
 }
 
 // Rolling window calculations
