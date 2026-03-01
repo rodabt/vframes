@@ -428,9 +428,10 @@ pub fn (df DataFrame) isnull() !DataFrame {
 // Fills NA/null values with a specified value
 @[params]
 pub struct FillnaOptions {
-	value		string = '0'	// Value to fill NA with (can be a string for SQL expression)
-	method		string			// 'ffill' for forward fill, 'bfill' for backward fill
-	limit		int				// Maximum number of consecutive NA values to fill
+pub:
+	value string = '0' // Value to fill NA with (can be a string for SQL expression)
+	method string // 'ffill' for forward fill, 'bfill' for backward fill
+	limit int // Maximum number of consecutive NA values to fill
 }
 
 // Fills NA/null values in the DataFrame

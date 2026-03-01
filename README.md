@@ -12,7 +12,7 @@ VFrames provides a Pandas-like interface for data manipulation in V, leveraging 
 - **DuckDB Backend** - Leverages DuckDB's vectorized execution for exceptional performance
 - **Multiple Data Sources** - Read CSV, JSON, and Parquet files with automatic type inference
 - **Immutable Design** - All operations return new DataFrames, preventing accidental mutations
-- **Rich Functionality** - Support for filtering, grouping, pivoting, joining, and more
+- **Rich Functionality** - Support for filtering, grouping, aggregations, and data transformations
 
 ## Installation
 
