@@ -1,5 +1,7 @@
 # Binaries for programs and plugins
 vframes
+examples/*
+!examples/*.v
 
 # Ignore binary output folders
 tmp/
