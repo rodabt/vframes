@@ -35,7 +35,7 @@ Functions frequently used in data cleaning and transformation.
 | [X] | `drop_duplicates` | Remove duplicate rows |
 | [X] | `sample` | Random sample of rows |
 | [X] | `assign` | Add new columns via assignment |
-| [X] | `select` | Select columns (already implemented) |
+| [X] | `select` | Select columns (use `subset` instead) |
 
 ### Phase 3: Medium Priority (Occasional Use)
 Useful for specific analytical workflows.
@@ -123,28 +123,30 @@ Complex operations.
 ## Implementation Notes
 
 ### Completed Functions (v0.1.3+)
-- `sort_values` - Sort by column values
 - `isna` / `isnull` - Check for null values
 - `notna` / `notnull` - Check for non-null values
 - `fillna` - Fill null values (value, ffill, bfill)
 - `ffill` / `bfill` - Forward/backward fill
 - Error handling - Proper error propagation
 
+### Not Yet Implemented
+- `sort_values` - Sort by column values
+
 ### Completed Functions (v0.1.4+ - Phase 1 & 2)
 
-#### Phase 1 - Critical
+#### Phase 1 - Completed
 - `to_csv` - Export DataFrame to CSV file
 - `to_json` - Export DataFrame to JSON file
 - `to_parquet` - Export DataFrame to Parquet file
-- `rename` - Rename columns
-- `rename_axis` - Rename axis (alias)
 - `replace` - Replace values in DataFrame
 - `astype` - Convert column data types
 - `isin` - Filter rows by list of values
 - `value_counts` - Count unique values
 - `agg` / `aggregate` - Aggregate functions
+- `rename` - Rename columns
+- `rename_axis` - Rename axis
 
-#### Phase 2 - High Priority
+#### Phase 2 - Completed
 - `merge` - Merge two DataFrames
 - `join` - Join two DataFrames
 - `concat` - Concatenate DataFrames
@@ -152,6 +154,7 @@ Complex operations.
 - `melt` - Unpivot DataFrame
 - `sample` - Random sample of rows
 - `assign` - Add new columns via assignment
+- `drop_duplicates` - Remove duplicate rows
 
 #### Phase 3 - Medium Priority
 - `apply` - Apply custom SQL functions
