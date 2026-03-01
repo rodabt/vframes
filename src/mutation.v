@@ -103,11 +103,12 @@ pub fn (df DataFrame) add_suffix(suffix string) DataFrame {
 
 @[params]
 pub struct DropOptions {
-	axis		int  			// 0: drop rows, 1: drop columns	
-	how			string = 'any'	// 'any': drop if any NA values, 'all': drop if all NA values
-	thresh		int				// Minimum number of non-NA values to keep
-	subset		[]string 		// Subset of columns to consider
-	nullstr	    string = 'null'
+pub:
+	axis int // 0: drop rows, 1: drop columns
+	how string = 'any' // 'any': drop if any NA values, 'all': drop if all NA values
+	thresh int // Minimum number of non-NA values to keep
+	subset []string // Subset of columns to consider
+	nullstr string = 'null'
 }
 
 // Drops NA rows or columns from DataFrame. If how is 'any', it drops the row/column if any NA values are present. 
@@ -124,4 +125,182 @@ pub fn (df DataFrame) dropna(do DropOptions) DataFrame {
 		id: id
 		ctx: df.ctx
 	}
+}
+
+// Renames columns using a mapper
+pub fn (df DataFrame) rename(mapper map[string]string) !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	mut cols := []string{}
+	for k in df.columns() {
+		new_name := mapper[k]
+		if new_name != '' {
+			cols << '"${k}" as "${new_name}"'
+		} else {
+			cols << k
+		}
+	}
+	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
+}
+
+// Rename axis (alias for rename - currently just returns same dataframe)
+pub fn (df DataFrame) rename_axis(name string) !DataFrame {
+	return df
+}
+
+// Removes duplicate rows
+pub fn (df DataFrame) drop_duplicates(subset []string) !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	cols := if subset.len > 0 { subset } else { df.columns() }
+	cols_str := cols.map('"${it}"').join(', ')
+	_ := db.query("create table ${id} as select distinct ${cols_str} from ${df.id}") or { return err }
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
+}
+
+@[params]
+pub struct SampleOptions {
+pub:
+	n int
+	frac f64
+	replace bool
+}
+
+// Returns a random sample of rows
+pub fn (df DataFrame) sample(so SampleOptions) !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	
+	total_rows := df.shape()[0]
+	sample_size := if so.n > 0 { so.n } else { int(f64(total_rows) * so.frac) }
+	
+	replacement := if so.replace { 'with replacement' } else { '' }
+	_ := db.query("create table ${id} as select * from ${df.id} using sample ${sample_size}${replacement}") or { return err }
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
+}
+
+@[params]
+pub struct MergeOptions {
+pub:
+	on string
+	how string = 'inner'
+	left_on string
+	right_on string
+}
+
+// Merge two DataFrames (SQL JOIN)
+pub fn (df DataFrame) merge(other DataFrame, mo MergeOptions) !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	
+	how_sql := match mo.how {
+		'left' { 'left join' }
+		'right' { 'right join' }
+		'outer', 'full' { 'full outer join' }
+		'cross' { 'cross join' }
+		else { 'inner join' }
+	}
+	
+	suffix_left := if mo.left_on != '' { mo.left_on } else { mo.on }
+	suffix_right := if mo.right_on != '' { mo.right_on } else { mo.on }
+	
+	query := "create table ${id} as select * from ${df.id} t1 ${how_sql} ${other.id} t2 on t1.\"${suffix_left}\" = t2.\"${suffix_right}\""
+	_ := db.query(query) or { return err }
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
+}
+
+// Join two DataFrames (alias for merge)
+pub fn (df DataFrame) join(other DataFrame, mo MergeOptions) !DataFrame {
+	return df.merge(other, mo)
+}
+
+// Concatenate DataFrames (stack vertically)
+pub fn concat(dfs []DataFrame) !DataFrame {
+	if dfs.len == 0 {
+		return empty()
+	}
+	if dfs.len == 1 {
+		return dfs[0]
+	}
+	
+	id := 'tbl_${rand.ulid()}'
+	mut db := &dfs[0].ctx.db
+	
+	table_names := dfs.map(it.id).join(', ')
+	_ := db.query("create table ${id} as select * from ${table_names}") or { return err }
+	return DataFrame{
+		id: id
+		ctx: dfs[0].ctx
+	}
+}
+
+@[params]
+pub struct PivotOptions {
+pub:
+	index string
+	columns string
+	values string
+	aggfunc string = 'max'
+}
+
+// Pivot table - reshape data from long to wide format
+pub fn (df DataFrame) pivot(po PivotOptions) !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	
+	_ := db.query("create table ${id} as pivot ${df.id} on \"${po.columns}\" using max(\"${po.values}\") as \"${po.values}\" group by \"${po.index}\" order by \"${po.index}\"") or { return err }
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
+}
+
+// Advanced pivot with aggregation
+pub fn (df DataFrame) pivot_table(po PivotOptions) !DataFrame {
+	return df.pivot(po)
+}
+
+@[params]
+pub struct MeltOptions {
+pub:
+	id_vars []string
+	value_vars []string
+	var_name string = 'variable'
+	value_name string = 'value'
+}
+
+// Unpivot DataFrame from wide to long format
+pub fn (df DataFrame) melt(mo MeltOptions) !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	
+	id_cols := mo.id_vars.map('"${it}"').join(', ')
+	mut queries := []string{}
+	for val_col in mo.value_vars {
+		queries << 'select ${id_cols}, \'${val_col}\' as "${mo.var_name}", "${val_col}" as "${mo.value_name}" from ${df.id}'
+	}
+	query_str := queries.join(' union all ')
+	_ := db.query("create table ${id} as ${query_str}") or { return err }
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
+}
+
+// Add new columns via assignment
+pub fn (df DataFrame) assign(col string, expr string) !DataFrame {
+	return df.add_column(col, expr)
 }
