@@ -290,6 +290,27 @@ fn test_std_and_var() {
 	assert var_shape[0] == 1
 }
 
+fn test_to_dict_and_to_markdown() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	data := [
+		{'name': json2.Any('Alice'), 'age': json2.Any(30)},
+		{'name': json2.Any('Bob'), 'age': json2.Any(25)},
+	]
+	df := ctx.read_records(data)!
+
+	dict := df.to_dict()!
+	assert dict.len == 2
+	assert dict[0]['name'] or { json2.Any('') }.str() == 'Alice'
+	assert dict[1]['age'] or { json2.Any(0) }.int() == 25
+
+	md := df.to_markdown()!
+	assert md.contains('name')
+	assert md.contains('Alice')
+	assert md.contains('---')
+}
+
 fn test_median() {
 	mut ctx := vframes.init()!
 	defer { ctx.close() }

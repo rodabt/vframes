@@ -135,3 +135,48 @@ fn test__pow() {
 	assert rows[1]['x'] or { json2.Any(0.0) }.f64() == 16.0
 	assert rows[2]['x'] or { json2.Any(0.0) }.f64() == 4.0
 }
+
+fn test__cumsum() {
+	d := [
+		{"x": json2.Any(1), "y": json2.Any(10)},
+		{"x": json2.Any(2), "y": json2.Any(20)},
+		{"x": json2.Any(3), "y": json2.Any(30)}
+	]
+	mut ctx := vframes.init()!
+	df := ctx.read_records(d) or { panic(err) }
+	result := df.cumsum()!
+	rows := result.values(vframes.ValuesParams{})! as []map[string]json2.Any
+	assert rows[0]['x'] or { json2.Any(0) }.int() == 1
+	assert rows[1]['x'] or { json2.Any(0) }.int() == 3
+	assert rows[2]['x'] or { json2.Any(0) }.int() == 6
+}
+
+fn test__cummax() {
+	d := [
+		{"x": json2.Any(3)},
+		{"x": json2.Any(1)},
+		{"x": json2.Any(4)}
+	]
+	mut ctx := vframes.init()!
+	df := ctx.read_records(d) or { panic(err) }
+	result := df.cummax()!
+	rows := result.values(vframes.ValuesParams{})! as []map[string]json2.Any
+	assert rows[0]['x'] or { json2.Any(0) }.int() == 3
+	assert rows[1]['x'] or { json2.Any(0) }.int() == 3
+	assert rows[2]['x'] or { json2.Any(0) }.int() == 4
+}
+
+fn test__cummin() {
+	d := [
+		{"x": json2.Any(3)},
+		{"x": json2.Any(1)},
+		{"x": json2.Any(4)}
+	]
+	mut ctx := vframes.init()!
+	df := ctx.read_records(d) or { panic(err) }
+	result := df.cummin()!
+	rows := result.values(vframes.ValuesParams{})! as []map[string]json2.Any
+	assert rows[0]['x'] or { json2.Any(0) }.int() == 3
+	assert rows[1]['x'] or { json2.Any(0) }.int() == 1
+	assert rows[2]['x'] or { json2.Any(0) }.int() == 1
+}

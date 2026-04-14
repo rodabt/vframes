@@ -276,8 +276,8 @@ pub:
 pub fn (df DataFrame) pivot(po PivotOptions) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	
-	_ := db.query("create table ${id} as pivot ${df.id} on \"${po.columns}\" using max(\"${po.values}\") as \"${po.values}\" group by \"${po.index}\" order by \"${po.index}\"") or { return err }
+	aggfunc := if po.aggfunc != '' { po.aggfunc } else { 'max' }
+	_ := db.query('CREATE TABLE ${id} AS PIVOT ${df.id} ON "${po.columns}" USING ${aggfunc}("${po.values}") AS "${po.values}" GROUP BY "${po.index}" ORDER BY "${po.index}"') or { return err }
 	return DataFrame{
 		id: id
 		ctx: df.ctx
@@ -319,4 +319,50 @@ pub fn (df DataFrame) melt(mo MeltOptions) !DataFrame {
 // Add new columns via assignment
 pub fn (df DataFrame) assign(col string, expr string) !DataFrame {
 	return df.add_column(col, expr)!
+}
+
+// Pandas alias: filter rows using a SQL condition (alias for query with condition)
+pub fn (df DataFrame) filter(condition string) !DataFrame {
+	return df.query(condition, DFConfig{})
+}
+
+// Pandas alias: select a subset of columns (alias for subset)
+pub fn (df DataFrame) select_cols(cols []string) !DataFrame {
+	return df.subset(cols)
+}
+
+// Pandas alias: drop one or more columns (alias for delete_column, supports multiple)
+pub fn (df DataFrame) drop(cols []string) !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	exclude := cols.map('"${it}"').join(', ')
+	_ := db.query('CREATE TABLE ${id} AS SELECT * EXCLUDE (${exclude}) FROM ${df.id}') or { return err }
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
+}
+
+// Pandas alias: group_by (alias with same signature)
+pub fn (df DataFrame) groupby(dimensions []string, metrics map[string]string) !DataFrame {
+	return df.group_by(dimensions, metrics)
+}
+
+@[params]
+pub struct SortOptions {
+pub:
+	ascending bool = true
+}
+
+// Sorts the DataFrame by one or more columns
+pub fn (df DataFrame) sort_values(cols []string, so SortOptions) !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	direction := if so.ascending { 'ASC' } else { 'DESC' }
+	order_cols := cols.map('"${it}" ${direction}').join(', ')
+	_ := db.query('CREATE TABLE ${id} AS SELECT * FROM ${df.id} ORDER BY ${order_cols}') or { return err }
+	return DataFrame{
+		id: id
+		ctx: df.ctx
+	}
 }

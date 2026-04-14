@@ -853,3 +853,71 @@ pub fn (df DataFrame) pct_change() !DataFrame {
 		ctx: df.ctx
 	}
 }
+
+// Cumulative sum of each numeric column
+pub fn (df DataFrame) cumsum() !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	mut cols := []string{}
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'sum("${k}") over (rows between unbounded preceding and current row) as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
+	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
+	return DataFrame{ id: id, ctx: df.ctx }
+}
+
+// Cumulative maximum of each numeric column
+pub fn (df DataFrame) cummax() !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	mut cols := []string{}
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'max("${k}") over (rows between unbounded preceding and current row) as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
+	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
+	return DataFrame{ id: id, ctx: df.ctx }
+}
+
+// Cumulative minimum of each numeric column
+pub fn (df DataFrame) cummin() !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	mut cols := []string{}
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'min("${k}") over (rows between unbounded preceding and current row) as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
+	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
+	return DataFrame{ id: id, ctx: df.ctx }
+}
+
+// Cumulative product of each numeric column
+pub fn (df DataFrame) cumprod() !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	mut cols := []string{}
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'exp(sum(ln(abs("${k}"))) over (rows between unbounded preceding and current row)) as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
+	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
+	return DataFrame{ id: id, ctx: df.ctx }
+}

@@ -66,3 +66,29 @@ pub fn (df DataFrame) to_parquet(path string) ! {
 	query := "COPY (SELECT * FROM ${df.id}) TO '${path}' (FORMAT PARQUET)"
 	_ := db.query(query) or { return err }
 }
+
+// Returns all rows as []map[string]json2.Any (in-memory dict representation)
+pub fn (df DataFrame) to_dict() ![]map[string]json2.Any {
+	mut db := &df.ctx.db
+	_ := db.query('SELECT * FROM ${df.id}') or { return err }
+	return db.get_array()
+}
+
+// Returns the DataFrame as a Markdown table string
+pub fn (df DataFrame) to_markdown() !string {
+	mut db := &df.ctx.db
+	_ := db.query('SELECT * FROM ${df.id}') or { return err }
+	cols := db.columns.keys()
+	rows := db.get_array()
+
+	// header row
+	mut lines := []string{}
+	lines << '| ' + cols.join(' | ') + ' |'
+	lines << '| ' + cols.map('---').join(' | ') + ' |'
+
+	for row in rows {
+		cells := cols.map((row[it] or { json2.Any('') }).str())
+		lines << '| ' + cells.join(' | ') + ' |'
+	}
+	return lines.join('\n')
+}

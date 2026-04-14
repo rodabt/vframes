@@ -186,3 +186,59 @@ fn test__assign() {
 	cols := result.columns()!
 	assert 'z' in cols
 }
+
+fn test__sort_values_asc() {
+	tdata := [
+		{"x": json2.Any(3), "y": json2.Any("c")},
+		{"x": json2.Any(1), "y": json2.Any("a")},
+		{"x": json2.Any(2), "y": json2.Any("b")}
+	]
+	mut ctx := vframes.init()!
+	df := ctx.read_records(tdata) or { panic(err) }
+	result := df.sort_values(['x'], vframes.SortOptions{ ascending: true })!
+	rows := result.values(vframes.ValuesParams{})! as []map[string]json2.Any
+	assert rows[0]['x'] or { json2.Any(0) }.int() == 1
+	assert rows[1]['x'] or { json2.Any(0) }.int() == 2
+	assert rows[2]['x'] or { json2.Any(0) }.int() == 3
+}
+
+fn test__sort_values_desc() {
+	tdata := [
+		{"x": json2.Any(3), "y": json2.Any("c")},
+		{"x": json2.Any(1), "y": json2.Any("a")},
+		{"x": json2.Any(2), "y": json2.Any("b")}
+	]
+	mut ctx := vframes.init()!
+	df := ctx.read_records(tdata) or { panic(err) }
+	result := df.sort_values(['x'], vframes.SortOptions{ ascending: false })!
+	rows := result.values(vframes.ValuesParams{})! as []map[string]json2.Any
+	assert rows[0]['x'] or { json2.Any(0) }.int() == 3
+	assert rows[2]['x'] or { json2.Any(0) }.int() == 1
+}
+
+fn test__filter() {
+	tdata := [
+		{"x": json2.Any(1), "y": json2.Any(10)},
+		{"x": json2.Any(2), "y": json2.Any(20)},
+		{"x": json2.Any(3), "y": json2.Any(30)}
+	]
+	mut ctx := vframes.init()!
+	df := ctx.read_records(tdata) or { panic(err) }
+	result := df.filter('x > 1')!
+	shape := result.shape()!
+	assert shape[0] == 2
+}
+
+fn test__drop() {
+	tdata := [
+		{"x": json2.Any(1), "y": json2.Any("a"), "z": json2.Any(100)},
+		{"x": json2.Any(2), "y": json2.Any("b"), "z": json2.Any(200)}
+	]
+	mut ctx := vframes.init()!
+	df := ctx.read_records(tdata) or { panic(err) }
+	result := df.drop(['y', 'z'])!
+	cols := result.columns()!
+	assert 'x' in cols
+	assert 'y' !in cols
+	assert 'z' !in cols
+}
