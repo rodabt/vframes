@@ -74,7 +74,8 @@ pub fn (df DataFrame) shape() ![]int {
 }
 
 @[params]
-struct ValuesParams {
+pub struct ValuesParams {
+pub:
 	as_string bool
 }
 

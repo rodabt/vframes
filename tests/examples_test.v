@@ -1,9 +1,6 @@
 import vframes
 import x.json2
 
-// Test basic functionality used in examples
-// These tests verify that the operations complete without panicking
-
 fn test_basic_dataframe_operations() {
 	mut ctx := vframes.init()!
 	defer { ctx.close() }
@@ -22,26 +19,32 @@ fn test_basic_dataframe_operations() {
 
 	cols := df.columns()!
 	assert cols.len == 4
+	assert 'name' in cols
+	assert 'age' in cols
 
 	types := df.dtypes()!
 	assert types.len == 4
 
 	df_subset := df.subset(['name', 'age'])!
-	_ = df_subset
+	subset_shape := df_subset.shape()!
+	assert subset_shape[1] == 2
 
 	df_calc := df.add_column('doubled_age', 'age * 2')!
-	_ = df_calc
+	calc_shape := df_calc.shape()!
+	assert calc_shape[1] == 5
 
 	df_deleted := df.delete_column('salary')!
-	_ = df_deleted
+	deleted_cols := df_deleted.columns()!
+	assert 'salary' !in deleted_cols
+	assert deleted_cols.len == 3
 
 	df_sliced := df.slice(2, 3)!
-	_ = df_sliced
+	sliced_shape := df_sliced.shape()!
+	assert sliced_shape[0] == 2
 
 	df_prefixed := df.add_prefix('col_')!
-	_ = df_prefixed
-
-	assert true
+	prefixed_cols := df_prefixed.columns()!
+	assert 'col__id' in prefixed_cols || 'col_id' in prefixed_cols
 }
 
 fn test_grouping_and_aggregation() {
@@ -60,18 +63,23 @@ fn test_grouping_and_aggregation() {
 		'total_sales': 'sum(sales)',
 		'avg_quantity': 'avg(quantity)'
 	})!
-	_ = df_grouped
+	grouped_shape := df_grouped.shape()!
+	assert grouped_shape[0] == 2  // 2 distinct regions
+	grouped_cols := df_grouped.columns()!
+	assert 'total_sales' in grouped_cols
+	assert 'avg_quantity' in grouped_cols
 
 	df_filtered := df.query('sales > 30000', vframes.DFConfig{})!
-	_ = df_filtered
+	filtered_shape := df_filtered.shape()!
+	assert filtered_shape[0] == 2  // two rows with sales > 30000
 
 	df_sum := df.sum(vframes.FuncOptions{})!
-	_ = df_sum
+	sum_shape := df_sum.shape()!
+	assert sum_shape[0] == 1  // sum collapses to 1 row
 
 	df_mean := df.mean(vframes.FuncOptions{})!
-	_ = df_mean
-
-	assert true
+	mean_shape := df_mean.shape()!
+	assert mean_shape[0] == 1
 }
 
 fn test_missing_values_handling() {
@@ -87,19 +95,24 @@ fn test_missing_values_handling() {
 	df := ctx.read_records(data)!
 
 	df_isna := df.isna()!
-	_ = df_isna
+	isna_shape := df_isna.shape()!
+	assert isna_shape[0] == 3
+	assert isna_shape[1] == 3
 
 	df_notna := df.notna()!
-	_ = df_notna
+	notna_shape := df_notna.shape()!
+	assert notna_shape[0] == 3
 
 	df_dropna := df.dropna(vframes.DropOptions{how: 'any'})!
-	_ = df_dropna
+	dropna_shape := df_dropna.shape()!
+	// row 2 has null age, so it's dropped
+	assert dropna_shape[0] == 2
 
 	df_ffill := df.ffill()!
-	_ = df_ffill
+	assert df_ffill.shape()![0] == 3
 
 	df_bfill := df.bfill()!
-	_ = df_bfill
+	assert df_bfill.shape()![0] == 3
 
 	num_data := [
 		{'x': json2.Any(1), 'y': json2.Any(100.0)},
@@ -108,9 +121,7 @@ fn test_missing_values_handling() {
 	]
 	df_num := ctx.read_records(num_data)!
 	df_filled := df_num.fillna(vframes.FillnaOptions{value: '0'})!
-	_ = df_filled
-
-	assert true
+	assert df_filled.shape()![0] == 3
 }
 
 fn test_data_transformations() {
@@ -126,21 +137,21 @@ fn test_data_transformations() {
 	df := ctx.read_records(data)!
 
 	df_abs := df.abs()!
-	_ = df_abs
+	abs_shape := df_abs.shape()!
+	assert abs_shape[0] == 3
 
 	df_rounded := df.round(0)!
-	_ = df_rounded
+	assert df_rounded.shape()![0] == 3
 
 	df_clipped := df.clip(0.0, 150.0)!
-	_ = df_clipped
+	assert df_clipped.shape()![0] == 3
 
 	df_squared := df.pow(2, vframes.FuncOptions{})!
-	_ = df_squared
+	assert df_squared.shape()![0] == 3
 
 	df_converted := df.astype({'value': 'int'})!
-	_ = df_converted
-
-	assert true
+	converted_types := df_converted.dtypes()!
+	assert converted_types['value'].to_lower() == 'integer'
 }
 
 fn test_value_operations() {
@@ -154,10 +165,10 @@ fn test_value_operations() {
 	]
 	df_str := ctx.read_records(str_data)!
 	df_isin := df_str.isin(['A', 'C'])!
-	_ = df_isin
+	assert df_isin.shape()![0] == 3
 
 	df_replaced := df_str.replace('A', 'Alpha')!
-	_ = df_replaced
+	assert df_replaced.shape()![0] == 3
 
 	data := [
 		{'category': json2.Any('A'), 'value': json2.Any(100)},
@@ -165,9 +176,8 @@ fn test_value_operations() {
 	]
 	df := ctx.read_records(data)!
 	df_nunique := df.nunique()!
-	_ = df_nunique
-
-	assert true
+	nunique_shape := df_nunique.shape()!
+	assert nunique_shape[0] == 1  // nunique returns 1 row
 }
 
 fn test_extremes() {
@@ -181,8 +191,11 @@ fn test_extremes() {
 	]
 
 	df := ctx.read_records(data)!
-	_ = df
-	assert true
+	df_largest := df.nlargest(2)!
+	assert df_largest.shape()![0] == 2
+
+	df_smallest := df.nsmallest(2)!
+	assert df_smallest.shape()![0] == 2
 }
 
 fn test_arithmetic_operations() {
@@ -197,18 +210,20 @@ fn test_arithmetic_operations() {
 	df := ctx.read_records(data)!
 
 	df_add := df.add(5)!
-	_ = df_add
+	add_rows := df_add.values(vframes.ValuesParams{})! as []map[string]json2.Any
+	assert add_rows[0]['x'] or { json2.Any(0) }.int() == 15
 
 	df_sub := df.sub(2)!
-	_ = df_sub
+	sub_rows := df_sub.values(vframes.ValuesParams{})! as []map[string]json2.Any
+	assert sub_rows[0]['x'] or { json2.Any(0) }.int() == 8
 
 	df_mul := df.mul(2)!
-	_ = df_mul
+	mul_rows := df_mul.values(vframes.ValuesParams{})! as []map[string]json2.Any
+	assert mul_rows[0]['x'] or { json2.Any(0) }.int() == 20
 
 	df_div := df.div(2)!
-	_ = df_div
-
-	assert true
+	div_rows := df_div.values(vframes.ValuesParams{})! as []map[string]json2.Any
+	assert div_rows[0]['x'] or { json2.Any(0.0) }.f64() == 5.0
 }
 
 fn test_dataframe_info_and_describe() {
@@ -222,13 +237,13 @@ fn test_dataframe_info_and_describe() {
 
 	df := ctx.read_records(data)!
 
-	info_result := df.info(vframes.DFConfig{to_stdout: false})!
-	_ = info_result
+	info_result := df.info(vframes.DFConfig{to_stdout: false})! as []map[string]json2.Any
+	// info returns one row per column
+	assert info_result.len == 3
 
-	describe_result := df.describe(vframes.DFConfig{to_stdout: false})!
-	_ = describe_result
-
-	assert true
+	describe_result := df.describe(vframes.DFConfig{to_stdout: false})! as []map[string]json2.Any
+	// describe returns one row per column
+	assert describe_result.len == 3
 }
 
 fn test_head_and_tail() {
@@ -245,13 +260,13 @@ fn test_head_and_tail() {
 
 	df := ctx.read_records(data)!
 
-	head_result := df.head(3, vframes.DFConfig{to_stdout: false})!
-	_ = head_result
+	head_result := df.head(3, vframes.DFConfig{to_stdout: false})! as []map[string]json2.Any
+	assert head_result.len == 3
 
-	tail_result := df.tail(2, vframes.DFConfig{to_stdout: false})!
-	_ = tail_result
-
-	assert true
+	tail_result := df.tail(2, vframes.DFConfig{to_stdout: false})! as []map[string]json2.Any
+	assert tail_result.len == 2
+	// last two rows are David (4) and Eve (5)
+	assert tail_result[1]['id'] or { json2.Any(0) }.int() == 5
 }
 
 fn test_std_and_var() {
@@ -267,12 +282,12 @@ fn test_std_and_var() {
 	df := ctx.read_records(data)!
 
 	df_std := df.std()!
-	_ = df_std
+	std_shape := df_std.shape()!
+	assert std_shape[0] == 1
 
 	df_var := df.var()!
-	_ = df_var
-
-	assert true
+	var_shape := df_var.shape()!
+	assert var_shape[0] == 1
 }
 
 fn test_median() {
@@ -288,7 +303,9 @@ fn test_median() {
 	df := ctx.read_records(data)!
 
 	df_median := df.median(vframes.FuncOptions{})!
-	_ = df_median
-
-	assert true
+	median_shape := df_median.shape()!
+	assert median_shape[0] == 1
+	rows := df_median.values(vframes.ValuesParams{})! as []map[string]json2.Any
+	// median of 10,20,30 is 20
+	assert rows[0]['x'] or { json2.Any(0) }.int() == 20
 }

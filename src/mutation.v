@@ -64,14 +64,27 @@ pub fn (df DataFrame) group_by(dimensions []string, metrics map[string]string) !
 }
 
 
-// Allows you to use a valid sql expression with the DataFrame. It returns a DataFrame Result
-// Examples: `df.query("value*2 as new_value, lower(name) as lowercase_name")`
+// Allows you to filter rows or select/transform columns using a SQL expression.
+// - Pure condition: `df.query("sales > 40000")` → SELECT * WHERE sales > 40000
+// - Select + filter: `df.query("name, age WHERE age > 25")` → SELECT name, age WHERE age > 25
+// - Column expressions: `df.query("value*2 as new_value, lower(name) as lower_name")`
 pub fn (df DataFrame) query(q string, dconf DFConfig) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	_ := db.query('SELECT ${q} FROM ${df.id}') or { 
-		eprintln("Invalid query syntax: ${err.msg()}")
-		return error("Invalid query syntax: ${err.msg()}")	
+	q_upper := q.to_upper()
+	sql_str := if where_idx := q_upper.index(' WHERE ') {
+		cols := q[..where_idx].trim_space()
+		cond := q[where_idx + 7..]
+		select_cols := if cols == '' || cols == '*' { '*' } else { cols }
+		'CREATE TABLE ${id} AS SELECT ${select_cols} FROM ${df.id} WHERE ${cond}'
+	} else if q_upper.contains('>') || q_upper.contains('<') || q_upper.contains(' = ')
+		|| q_upper.contains(' IN ') || q_upper.contains(' IS ') || q_upper.contains(' LIKE ') {
+		'CREATE TABLE ${id} AS SELECT * FROM ${df.id} WHERE ${q}'
+	} else {
+		'CREATE TABLE ${id} AS SELECT ${q} FROM ${df.id}'
+	}
+	_ := db.query(sql_str) or {
+		return error("Invalid query syntax: ${err.msg()}")
 	}
 	return DataFrame{
 		id: id

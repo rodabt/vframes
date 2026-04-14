@@ -10,16 +10,22 @@ fn test__add_prefix() {
 	mut ctx := vframes.init()!
 	df := ctx.read_records(data) or { panic(err) }
 	result := df.add_prefix('col')!
-	_ = result
-	assert true
+	cols := result.columns()!
+	assert 'col_x' in cols
+	assert 'col_y' in cols
+	assert 'col_z' in cols
+	assert 'x' !in cols
 }
 
 fn test__add_suffix() {
 	mut ctx := vframes.init()!
 	df := ctx.read_records(data) or { panic(err) }
 	result := df.add_suffix('col')!
-	_ = result
-	assert true
+	cols := result.columns()!
+	assert 'x_col' in cols
+	assert 'y_col' in cols
+	assert 'z_col' in cols
+	assert 'x' !in cols
 }
 
 fn test__dropna() {
