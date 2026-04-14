@@ -38,8 +38,9 @@ fn test__dropna() {
 	mut ctx := vframes.init()!
 	df := ctx.read_records(tdata) or { panic(err) }
 	result := df.dropna(vframes.DropOptions{})!
-	_ = result
-	assert true
+	shape := result.shape()!
+	// only row 1 has no nulls
+	assert shape[0] == 1
 }
 
 fn test__rename() {
@@ -159,8 +160,11 @@ fn test__pivot_table() {
 	mut ctx := vframes.init()!
 	df := ctx.read_records(tdata) or { panic(err) }
 	result := df.pivot_table(index: 'date', columns: 'variable', values: 'value', aggfunc: 'mean')!
-	_ = result
-	assert true
+	shape := result.shape()!
+	// 2 distinct dates → 2 rows
+	assert shape[0] == 2
+	cols := result.columns()!
+	assert 'temp_value' in cols
 }
 
 fn test__melt() {
