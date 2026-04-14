@@ -114,13 +114,14 @@ pub:
 // Drops NA rows or columns from DataFrame. If how is 'any', it drops the row/column if any NA values are present. 
 // If how is 'all', it drops the row/column if all NA values are present
 // If subset is passed, it only considers the columns passed in the subset as final columns for output
-pub fn (df DataFrame) dropna(do DropOptions) DataFrame {
+pub fn (df DataFrame) dropna(do DropOptions) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	selected_columns := if do.subset.len > 0 { do.subset } else { df.columns() }
+	all_cols := df.columns()!
+	selected_columns := if do.subset.len > 0 { do.subset } else { all_cols }
 	conn := if do.how == 'any' { 'and' } else { 'or' }
-	predicate := df.columns().map("${it} is not null").join(' ${conn} ')
-	_ := db.query("create table ${id} as select ${selected_columns.join(',')} from ${df.id} where ${predicate}") or { panic(err) }	
+	predicate := all_cols.map('${it} is not null').join(' ${conn} ')
+	_ := db.query("create table ${id} as select ${selected_columns.join(',')} from ${df.id} where ${predicate}") or { return err }
 	return DataFrame{
 		id: id
 		ctx: df.ctx
@@ -132,7 +133,8 @@ pub fn (df DataFrame) rename(mapper map[string]string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k in df.columns() {
+	all_cols := df.columns()!
+	for k in all_cols {
 		new_name := mapper[k]
 		if new_name != '' {
 			cols << '"${k}" as "${new_name}"'
@@ -156,7 +158,8 @@ pub fn (df DataFrame) rename_axis(name string) !DataFrame {
 pub fn (df DataFrame) drop_duplicates(subset []string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	cols := if subset.len > 0 { subset } else { df.columns() }
+	all_cols := df.columns()!
+	cols := if subset.len > 0 { subset } else { all_cols }
 	cols_str := cols.map('"${it}"').join(', ')
 	_ := db.query("create table ${id} as select distinct ${cols_str} from ${df.id}") or { return err }
 	return DataFrame{
@@ -178,7 +181,7 @@ pub fn (df DataFrame) sample(so SampleOptions) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	
-	total_rows := df.shape()[0]
+	total_rows := (df.shape()!)[0]
 	sample_size := if so.n > 0 { so.n } else { int(f64(total_rows) * so.frac) }
 	
 	replacement := if so.replace { 'with replacement' } else { '' }
