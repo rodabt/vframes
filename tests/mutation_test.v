@@ -9,7 +9,7 @@ const data = [
 fn test__add_prefix() {
 	mut ctx := vframes.init()!
 	df := ctx.read_records(data) or { panic(err) }
-	result := df.add_prefix('col')
+	result := df.add_prefix('col')!
 	_ = result
 	assert true
 }
@@ -17,7 +17,7 @@ fn test__add_prefix() {
 fn test__add_suffix() {
 	mut ctx := vframes.init()!
 	df := ctx.read_records(data) or { panic(err) }
-	result := df.add_suffix('col')
+	result := df.add_suffix('col')!
 	_ = result
 	assert true
 }

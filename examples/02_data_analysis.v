@@ -46,32 +46,32 @@ fn main() {
 		'avg_sales': 'avg(sales)',
 		'total_quantity': 'sum(quantity)',
 		'count': 'count(*)'
-	})
+	})!
 	df_by_region.head(10, vframes.DFConfig{})!
-	
+
 	// Group by multiple columns
 	println('\nGroup by region and product:')
 	df_by_region_product := df.group_by(['region', 'product'], {
 		'total_sales': 'sum(sales)',
 		'avg_quantity': 'avg(quantity)'
-	})
+	})!
 	df_by_region_product.head(10, vframes.DFConfig{})!
 
 	print_header('Mathematical Operations')
-	
+
 	// Add calculated columns
 	println('\nAdding price_per_unit column (sales / quantity):')
-	df_with_price := df.add_column('price_per_unit', 'sales / quantity')
+	df_with_price := df.add_column('price_per_unit', 'sales / quantity')!
 	df_with_price.head(5, vframes.DFConfig{})!
-	
+
 	// Perform arithmetic operations on the entire DataFrame
 	println('\nAdding 1000 to all numeric values:')
 	df_plus_1000 := df.add(1000)!
 	df_plus_1000.head(3, vframes.DFConfig{})!
-	
+
 	println('\nMultiplying sales by 1.1 (10%% increase):')
 	// First select only numeric columns, then multiply
-	df_increased := df.add_column('sales_increased', 'sales * 1.1')
+	df_increased := df.add_column('sales_increased', 'sales * 1.1')!
 	df_increased.head(5, vframes.DFConfig{})!
 
 	print_header('Statistical Functions')

@@ -70,23 +70,23 @@ fn main() {
 
 	// Select a subset of columns
 	println('\nSelecting subset of columns (name, department, salary):')
-	df_subset := df.subset(['name', 'department', 'salary'])
+	df_subset := df.subset(['name', 'department', 'salary'])!
 	df_subset.head(3, vframes.DFConfig{})!
 
 	// Add a new calculated column
 	println('\nAdding a calculated column (salary_per_year):')
-	df_with_calc := df.add_column('salary_per_year', 'salary / years')
+	df_with_calc := df.add_column('salary_per_year', 'salary / years')!
 	df_with_calc.head(5, vframes.DFConfig{})!
 
 	// Add prefix to all columns
 	println('\nAdding prefix "emp_" to all columns:')
-	df_prefixed := df.add_prefix('emp_')
+	df_prefixed := df.add_prefix('emp_')!
 	println('Columns after prefix: ${df_prefixed.columns()!}')
 	df_prefixed.head(3, vframes.DFConfig{})!
 
 	// Delete a column
 	println('\nDeleting the "years" column:')
-	df_deleted := df.delete_column('years')
+	df_deleted := df.delete_column('years')!
 	println('Columns after deletion: ${df_deleted.columns()!}')
 	df_deleted.head(3, vframes.DFConfig{})!
 
@@ -94,7 +94,7 @@ fn main() {
 
 	// Get rows 3-5 (inclusive)
 	println('\nSlicing rows 3-5:')
-	df_sliced := df.slice(3, 5)
+	df_sliced := df.slice(3, 5)!
 	df_sliced.head(10, vframes.DFConfig{})!
 
 	print_header('Basic Usage Complete')

@@ -3,21 +3,21 @@ module vframes
 import rand
 
 // Deletes a column from the DataFrame
-pub fn (df DataFrame) delete_column(col string) DataFrame {
+pub fn (df DataFrame) delete_column(col string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select * exclude(${col}) from ${df.id}") or { panic(err) }
+	_ := db.query("create table ${id} as select * exclude(${col}) from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
 		ctx: df.ctx
 	}
 }
 
-// Adds a new column to DataFrame where `expr` should be a valid expression (see examples) 
-pub fn (df DataFrame) add_column(col string, expr string) DataFrame {
+// Adds a new column to DataFrame where `expr` should be a valid expression (see examples)
+pub fn (df DataFrame) add_column(col string, expr string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select *, ${expr} as ${col} from ${df.id}") or { panic(err) }
+	_ := db.query("create table ${id} as select *, ${expr} as ${col} from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
 		ctx: df.ctx
@@ -25,23 +25,23 @@ pub fn (df DataFrame) add_column(col string, expr string) DataFrame {
 }
 
 // Returns a subset of the DataFrame columns passed as an array
-pub fn (df DataFrame) subset(cols []string) DataFrame {
+pub fn (df DataFrame) subset(cols []string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { panic(err) }
+	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
 		ctx: df.ctx
 	}
 }
 
-// Returns a subset of rows between `start` row and `end` row (both inclusive) 
-pub fn (df DataFrame) slice(start int, end int) DataFrame {
+// Returns a subset of rows between `start` row and `end` row (both inclusive)
+pub fn (df DataFrame) slice(start int, end int) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	offset := start - 1
 	limit := end - start + 1
 	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select * from ${df.id} limit ${limit} offset ${offset}") or { panic(err) }
+	_ := db.query("create table ${id} as select * from ${df.id} limit ${limit} offset ${offset}") or { return err }
 	return DataFrame{
 		id: id
 		ctx: df.ctx
@@ -49,14 +49,14 @@ pub fn (df DataFrame) slice(start int, end int) DataFrame {
 }
 
 // Performs a group by operation where `dimensions` is an array of grouping labels, and metrics is a map of columns metrics and grouping operations (see examples)
-pub fn (df DataFrame) group_by(dimensions []string, metrics map[string]string) DataFrame {
+pub fn (df DataFrame) group_by(dimensions []string, metrics map[string]string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut sets := []string{}
 	for k,v in metrics {
 		sets << '${v} as ${k}'
 	}
-	_ := db.query("create table ${id} as select ${dimensions.join(',')}, ${sets.join(',')} from ${df.id} group by ${dimensions.join(',')}") or { panic(err) }
+	_ := db.query("create table ${id} as select ${dimensions.join(',')}, ${sets.join(',')} from ${df.id} group by ${dimensions.join(',')}") or { return err }
 	return DataFrame{
 		id: id
 		ctx: df.ctx
@@ -80,10 +80,10 @@ pub fn (df DataFrame) query(q string, dconf DFConfig) !DataFrame {
 }
 
 // Adds prefix `prefix` to every column
-pub fn (df DataFrame) add_prefix(prefix string) DataFrame {
+pub fn (df DataFrame) add_prefix(prefix string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select columns('(.*)') as '${prefix}_\\1' from ${df.id}") or { panic(err) }
+	_ := db.query("create table ${id} as select columns('(.*)') as '${prefix}_\\1' from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
 		ctx: df.ctx
@@ -91,10 +91,10 @@ pub fn (df DataFrame) add_prefix(prefix string) DataFrame {
 }
 
 // Adds suffix `suffix` to every column
-pub fn (df DataFrame) add_suffix(suffix string) DataFrame {
+pub fn (df DataFrame) add_suffix(suffix string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select columns('(.*)') as '\\1_${suffix}' from ${df.id}") or { panic(err) }
+	_ := db.query("create table ${id} as select columns('(.*)') as '\\1_${suffix}' from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
 		ctx: df.ctx
@@ -305,5 +305,5 @@ pub fn (df DataFrame) melt(mo MeltOptions) !DataFrame {
 
 // Add new columns via assignment
 pub fn (df DataFrame) assign(col string, expr string) !DataFrame {
-	return df.add_column(col, expr)
+	return df.add_column(col, expr)!
 }

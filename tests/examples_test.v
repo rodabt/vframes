@@ -26,19 +26,19 @@ fn test_basic_dataframe_operations() {
 	types := df.dtypes()!
 	assert types.len == 4
 
-	df_subset := df.subset(['name', 'age'])
+	df_subset := df.subset(['name', 'age'])!
 	_ = df_subset
 
-	df_calc := df.add_column('doubled_age', 'age * 2')
+	df_calc := df.add_column('doubled_age', 'age * 2')!
 	_ = df_calc
 
-	df_deleted := df.delete_column('salary')
+	df_deleted := df.delete_column('salary')!
 	_ = df_deleted
 
-	df_sliced := df.slice(2, 3)
+	df_sliced := df.slice(2, 3)!
 	_ = df_sliced
 
-	df_prefixed := df.add_prefix('col_')
+	df_prefixed := df.add_prefix('col_')!
 	_ = df_prefixed
 
 	assert true
@@ -59,7 +59,7 @@ fn test_grouping_and_aggregation() {
 	df_grouped := df.group_by(['region'], {
 		'total_sales': 'sum(sales)',
 		'avg_quantity': 'avg(quantity)'
-	})
+	})!
 	_ = df_grouped
 
 	df_filtered := df.query('sales > 30000', vframes.DFConfig{})!
