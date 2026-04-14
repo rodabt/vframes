@@ -47,8 +47,8 @@ pub struct ToCsvOptions {
 // Exports DataFrame to a CSV file
 pub fn (df DataFrame) to_csv(path string, opts ToCsvOptions) ! {
 	mut db := &df.ctx.db
-	header_stmt := if opts.header { 'header: true' } else { 'header: false' }
-	delim := if opts.delimiter == '\t' { '\t' } else { opts.delimiter[0].str() }
+	header_stmt := if opts.header { 'HEADER' } else { 'NO HEADER' }
+	delim := opts.delimiter
 	query := 'COPY (SELECT * FROM ${df.id}) TO \'${path}\' (FORMAT CSV, ${header_stmt}, DELIMITER \'${delim}\', NULL \'${opts.nullstr}\')'
 	_ := db.query(query) or { return err }
 }
