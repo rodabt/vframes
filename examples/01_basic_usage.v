@@ -15,11 +15,11 @@ fn print_header(s string) {
 fn main() {
 	// Initialize an in-memory context
 	// You can also use a persisted database: vframes.init(location: 'data.db')
-	mut ctx := vframes.init()
+	mut ctx := vframes.init()!
 	defer { ctx.close() }
 
 	print_header('Creating DataFrame from records')
-	
+
 	// Create sample data - a dataset of employees
 	// Note: Use json2.Any for all values
 	employees := [
@@ -32,69 +32,70 @@ fn main() {
 		{'id': json2.Any(7), 'name': json2.Any('Grace Wilson'), 'department': json2.Any('Marketing'), 'salary': json2.Any(61000.0), 'years': json2.Any(3)},
 		{'id': json2.Any(8), 'name': json2.Any('Henry Taylor'), 'department': json2.Any('Sales'), 'salary': json2.Any(68000.0), 'years': json2.Any(2)},
 	]
-	
+
 	// Load the data into a DataFrame
 	df := ctx.read_records(employees)!
-	println('Loaded ${df.shape()[0]} rows and ${df.shape()[1]} columns')
+	s0 := df.shape()!
+	println('Loaded ${s0[0]} rows and ${s0[1]} columns')
 
 	print_header('DataFrame Shape and Structure')
-	
+
 	// Get basic information about the DataFrame
-	shape := df.shape()
+	shape := df.shape()!
 	println('Shape: ${shape[0]} rows, ${shape[1]} columns')
-	println('Columns: ${df.columns()}')
-	println('Data Types: ${df.dtypes()}')
+	println('Columns: ${df.columns()!}')
+	println('Data Types: ${df.dtypes()!}')
 
 	print_header('Viewing Data (First 5 rows)')
-	
+
 	// Display first 5 rows
-	df.head(5, vframes.DFConfig{})
-	
+	df.head(5)!
+
 	print_header('Viewing Data (Last 3 rows)')
-	
+
 	// Display last 3 rows
-	df.tail(3, vframes.DFConfig{})
+	df.tail(3)!
 
 	print_header('DataFrame Info and Statistics')
-	
+
 	// Show column information
 	println('Column info:')
-	df.info(vframes.DFConfig{})
-	
+	df.info()!
+
 	// Show summary statistics
 	print_header('Summary Statistics')
-	df.describe(vframes.DFConfig{})
+	df.describe()!
 
 	print_header('Column Operations')
-	
+
 	// Select a subset of columns
 	println('\nSelecting subset of columns (name, department, salary):')
-	df_subset := df.subset(['name', 'department', 'salary'])
-	df_subset.head(3, vframes.DFConfig{})
-	
+	df_subset := df.subset(['name', 'department', 'salary'])!
+	df_subset.head(3)!
+
 	// Add a new calculated column
 	println('\nAdding a calculated column (salary_per_year):')
-	df_with_calc := df.add_column('salary_per_year', 'salary / years')
-	df_with_calc.head(5, vframes.DFConfig{})
-	
+	df_with_calc := df.add_column('salary_per_year', 'salary / years')!
+	df_with_calc.head(5)!
+
 	// Add prefix to all columns
 	println('\nAdding prefix "emp_" to all columns:')
-	df_prefixed := df.add_prefix('emp_')
-	println('Columns after prefix: ${df_prefixed.columns()}')
-	df_prefixed.head(3, vframes.DFConfig{})
-	
+	df_prefixed := df.add_prefix('emp_')!
+	println('Columns after prefix: ${df_prefixed.columns()!}')
+	df_prefixed.head(3)!
+
 	// Delete a column
 	println('\nDeleting the "years" column:')
-	df_deleted := df.delete_column('years')
-	println('Columns after deletion: ${df_deleted.columns()}')
-	df_deleted.head(3, vframes.DFConfig{})
+	df_deleted := df.delete_column('years')!
+	println('Columns after deletion: ${df_deleted.columns()!}')
+	df_deleted.head(3)!
 
 	print_header('Slicing Data')
-	
+
 	// Get rows 3-5 (inclusive)
 	println('\nSlicing rows 3-5:')
-	df_sliced := df.slice(3, 5)
-	df_sliced.head(10, vframes.DFConfig{})
+	df_sliced := df.slice(3, 5)!
+	df_sliced.head(10)!
 
 	print_header('Basic Usage Complete')
 	println('This example demonstrated:')

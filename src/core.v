@@ -5,13 +5,13 @@ import rand
 import v.vmod
 
 // Initializes a new DataFrame context
-pub fn init(cfg ContextConfig) DataFrameContext {
+pub fn init(cfg ContextConfig) !DataFrameContext {
 	mut db := vduckdb.DuckDB{}
-	_ := db.open(cfg.location) or { panic(err) }
-	_ := db.query("select 1") or { panic(err) }
+	_ := db.open(cfg.location) or { return err }
+	_ := db.query('select 1') or { return err }
 	return DataFrameContext{
 		dpath: cfg.location
-		db: db 
+		db: db
 	}
 }
 
@@ -21,14 +21,14 @@ pub fn (mut ctx DataFrameContext) close() {
 }
 
 // Prints vframes version
-pub fn version() string {
-	vm := vmod.decode(@VMOD_FILE) or { panic(err) }
+pub fn version() !string {
+	vm := vmod.decode(@VMOD_FILE) or { return err }
 	return vm.version
 }
 
 // Returns an empty in-memory DataFrame. Mainly used as a Result parameter for `read_auto` function
-pub fn empty() DataFrame {
-	mut ctx := init()
+pub fn empty() !DataFrame {
+	mut ctx := init()!
 	id := 'tbl_${rand.ulid()}'
 	return DataFrame{
 		id: id

@@ -18,6 +18,7 @@ docs/
 *.db
 
 # Reserved files
+CLAUDE.md
 TODO.md
 Makefile
 DEV.md

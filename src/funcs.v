@@ -7,13 +7,18 @@ fn (df DataFrame) v_apply(func string, args ...string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k,v in df.dtypes() {
-		if v in ['integer','decimal','float','bigint','double','hugeint'] {
-			cols <<  if args.len > 0 { '${func}("${k}",${args.join(',')}) as "${k}"' } else { '${func}("${k}") as "${k}"' }
+	types := df.dtypes()!
+	for k, v in types {
+		if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			cols << if args.len > 0 {
+				'${func}("${k}",${args.join(',')}) as "${k}"'
+			} else {
+				'${func}("${k}") as "${k}"'
+			}
 		} else {
 			cols << k
 		}
-	} 
+	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}")!
 	return DataFrame{
 		id: id
@@ -23,8 +28,8 @@ fn (df DataFrame) v_apply(func string, args ...string) !DataFrame {
 
 @[params]
 pub struct FuncOptions {
-	axis		int = 1
-	skipna		bool = true
+	axis   int  = 1
+	skipna bool = true
 }
 
 // Internal: Apply grouping function 'func' to numeric values
@@ -33,13 +38,14 @@ fn (df DataFrame) min_max_apply(func string, fo FuncOptions) !DataFrame {
 	order_by := if func == 'min' { 'desc' } else { 'asc' }
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k,v in df.dtypes() {
-		cols << if v in ['integer','decimal','float','bigint','double','hugeint'] { 
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
 			'${func}("${k}") as "${k}"'
-		} else { 
-			'last("${k}" order by "${k}" ${order_by}) as "${k}"' 
+		} else {
+			'last("${k}" order by "${k}" ${order_by}) as "${k}"'
 		}
-	} 
+	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}")!
 	return DataFrame{
 		id: id
@@ -53,11 +59,12 @@ fn (df DataFrame) g_apply(func string, fo FuncOptions) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k,v in df.dtypes() {
-		if v in ['integer','decimal','float','bigint','double','hugeint'] { 
+	types := df.dtypes()!
+	for k, v in types {
+		if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
 			cols << '${func}("${k}") as "${k}"'
 		}
-	} 
+	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
@@ -70,9 +77,14 @@ pub fn (df DataFrame) add[T](n T) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k,v in df.dtypes() {
-		cols << if v in ['integer','decimal','float','bigint','double','hugeint'] { '${k}+${n.str()} as "${k}"'} else { k }
-	} 
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'${k}+${n.str()} as "${k}"'
+		} else {
+			k
+		}
+	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
@@ -110,7 +122,6 @@ pub fn (df DataFrame) median(fo FuncOptions) !DataFrame {
 	return new_df
 }
 
-
 // Calculates the sum for each of the rows (`axis: 0`) or columns (`axis: 1`. default) of the DataFrame
 pub fn (df DataFrame) sum(fo FuncOptions) !DataFrame {
 	new_df := df.g_apply('sum', fo)!
@@ -128,9 +139,14 @@ pub fn (df DataFrame) sub[T](n T) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k,v in df.dtypes() {
-		cols << if v in ['integer','decimal','float','bigint','double','hugeint'] { '\"${k}\"-${n.str()} as "${k}"'} else { '\"${k}\"' }
-	} 
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'"${k}"-${n.str()} as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
@@ -143,9 +159,14 @@ pub fn (df DataFrame) mul[T](n T) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k,v in df.dtypes() {
-		cols << if v in ['integer','decimal','float','bigint','double','hugeint'] { '\"${k}\"*${n.str()} as "${k}"'} else { '\"${k}\"' }
-	} 
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'"${k}"*${n.str()} as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
@@ -158,9 +179,14 @@ pub fn (df DataFrame) div[T](n T) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k,v in df.dtypes() {
-		cols << if v in ['integer','decimal','float','bigint','double','hugeint'] { '\"${k}\"/${n.str()} as "${k}"'} else { '\"${k}\"' }
-	} 
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'"${k}"/${n.str()} as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
@@ -173,9 +199,14 @@ pub fn (df DataFrame) floordiv[T](n T) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k,v in df.dtypes() {
-		cols << if v in ['integer','decimal','float','bigint','double','hugeint'] { 'floor(${k}/${n.str()}) as "${k}"'} else { '\"${k}\"' }
-	} 
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'floor(${k}/${n.str()}) as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
@@ -188,9 +219,14 @@ pub fn (df DataFrame) mod[T](n T) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k,v in df.dtypes() {
-		cols << if v in ['integer','decimal','float','bigint','double','hugeint'] { '\"${k}\" % ${n.str()} as "${k}"'} else { '\"${k}\"' }
-	} 
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'"${k}" % ${n.str()} as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
@@ -203,9 +239,14 @@ pub fn (df DataFrame) round(decimals int) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k,v in df.dtypes() {
-		cols << if v in ['integer','decimal','float','bigint','double','hugeint'] { 'round(${k},${decimals}) as "${k}"'} else { '\"${k}\"' }
-	} 
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'round(${k},${decimals}) as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
 	return DataFrame{
 		id: id
@@ -228,7 +269,8 @@ pub fn (df DataFrame) count() !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k in df.columns() {
+	all_cols := df.columns()!
+	for k in all_cols {
 		cols << 'count(${k}) as "${k}"'
 	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -243,7 +285,8 @@ pub fn (df DataFrame) nunique() !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k in df.columns() {
+	all_cols := df.columns()!
+	for k in all_cols {
 		cols << 'count(distinct ${k}) as "${k}"'
 	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -258,11 +301,12 @@ pub fn (df DataFrame) clip(min_val f64, max_val f64) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k,v in df.dtypes() {
-		cols << if v in ['integer','decimal','float','bigint','double','hugeint'] { 
-			'greatest(${min_val}, least(${max_val}, ${k})) as "${k}"' 
-		} else { 
-			k 
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'greatest(${min_val}, least(${max_val}, ${k})) as "${k}"'
+		} else {
+			k
 		}
 	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -281,7 +325,7 @@ pub fn (df DataFrame) mask(condition string) !DataFrame {
 pub fn (df DataFrame) eq(other DataFrame) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	cols := df.columns()
+	cols := df.columns()!
 	mut select_cols := []string{}
 	for col in cols {
 		select_cols << '(t1.${col} = t2.${col}) as "${col}"'
@@ -297,7 +341,7 @@ pub fn (df DataFrame) eq(other DataFrame) !DataFrame {
 pub fn (df DataFrame) ne(other DataFrame) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	cols := df.columns()
+	cols := df.columns()!
 	mut select_cols := []string{}
 	for col in cols {
 		select_cols << '(t1.${col} != t2.${col}) as "${col}"'
@@ -313,7 +357,7 @@ pub fn (df DataFrame) ne(other DataFrame) !DataFrame {
 pub fn (df DataFrame) gt(other DataFrame) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	cols := df.columns()
+	cols := df.columns()!
 	mut select_cols := []string{}
 	for col in cols {
 		select_cols << '(t1.${col} > t2.${col}) as "${col}"'
@@ -329,7 +373,7 @@ pub fn (df DataFrame) gt(other DataFrame) !DataFrame {
 pub fn (df DataFrame) ge(other DataFrame) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	cols := df.columns()
+	cols := df.columns()!
 	mut select_cols := []string{}
 	for col in cols {
 		select_cols << '(t1.${col} >= t2.${col}) as "${col}"'
@@ -345,7 +389,7 @@ pub fn (df DataFrame) ge(other DataFrame) !DataFrame {
 pub fn (df DataFrame) lt(other DataFrame) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	cols := df.columns()
+	cols := df.columns()!
 	mut select_cols := []string{}
 	for col in cols {
 		select_cols << '(t1.${col} < t2.${col}) as "${col}"'
@@ -361,7 +405,7 @@ pub fn (df DataFrame) lt(other DataFrame) !DataFrame {
 pub fn (df DataFrame) le(other DataFrame) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	cols := df.columns()
+	cols := df.columns()!
 	mut select_cols := []string{}
 	for col in cols {
 		select_cols << '(t1.${col} <= t2.${col}) as "${col}"'
@@ -377,7 +421,8 @@ pub fn (df DataFrame) le(other DataFrame) !DataFrame {
 pub fn (df DataFrame) nlargest(n int) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	numeric_cols := df.dtypes().values().filter(it in ['integer','decimal','float','bigint','double','hugeint'])
+	types := df.dtypes()!
+	numeric_cols := types.keys().filter(types[it] in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'])
 	if numeric_cols.len == 0 {
 		return df
 	}
@@ -393,7 +438,8 @@ pub fn (df DataFrame) nlargest(n int) !DataFrame {
 pub fn (df DataFrame) nsmallest(n int) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	numeric_cols := df.dtypes().values().filter(it in ['integer','decimal','float','bigint','double','hugeint'])
+	types := df.dtypes()!
+	numeric_cols := types.keys().filter(types[it] in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'])
 	if numeric_cols.len == 0 {
 		return df
 	}
@@ -410,7 +456,8 @@ pub fn (df DataFrame) isna() !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k in df.columns() {
+	all_cols := df.columns()!
+	for k in all_cols {
 		cols << '("${k}" is null) as "${k}"'
 	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -429,9 +476,9 @@ pub fn (df DataFrame) isnull() !DataFrame {
 @[params]
 pub struct FillnaOptions {
 pub:
-	value string = '0' // Value to fill NA with (can be a string for SQL expression)
-	method string // 'ffill' for forward fill, 'bfill' for backward fill
-	limit int // Maximum number of consecutive NA values to fill
+	value  string = '0' // Value to fill NA with (can be a string for SQL expression)
+	method string        // 'ffill' for forward fill, 'bfill' for backward fill
+	limit  int           // Maximum number of consecutive NA values to fill
 }
 
 // Fills NA/null values in the DataFrame
@@ -441,22 +488,23 @@ pub:
 pub fn (df DataFrame) fillna(fo FillnaOptions) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	
+	all_cols := df.columns()!
+
 	if fo.method == 'ffill' {
 		mut cols := []string{}
-		for k in df.columns() {
+		for k in all_cols {
 			cols << 'last_value("${k}" ignore nulls) over () as "${k}"'
 		}
 		_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
 	} else if fo.method == 'bfill' {
 		mut cols := []string{}
-		for k in df.columns() {
+		for k in all_cols {
 			cols << 'first_value("${k}" ignore nulls) over (order by rowid desc) as "${k}"'
 		}
 		_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
 	} else {
 		mut cols := []string{}
-		for k in df.columns() {
+		for k in all_cols {
 			cols << 'coalesce("${k}", ${fo.value}) as "${k}"'
 		}
 		_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -482,7 +530,8 @@ pub fn (df DataFrame) notna() !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k in df.columns() {
+	all_cols := df.columns()!
+	for k in all_cols {
 		cols << '("${k}" is not null) as "${k}"'
 	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -502,7 +551,8 @@ pub fn (df DataFrame) replace(to_replace string, value string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k in df.columns() {
+	all_cols := df.columns()!
+	for k in all_cols {
 		cols << 'replace("${k}", \'${to_replace}\', \'${value}\') as "${k}"'
 	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -517,7 +567,8 @@ pub fn (df DataFrame) astype(dtype_map map[string]string) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k in df.columns() {
+	all_cols := df.columns()!
+	for k in all_cols {
 		target_type := dtype_map[k]
 		if target_type != '' {
 			match target_type {
@@ -545,7 +596,8 @@ pub fn (df DataFrame) isin(values []string) !DataFrame {
 	mut db := &df.ctx.db
 	values_list := values.map('\'${it}\'').join(', ')
 	mut cols := []string{}
-	for k in df.columns() {
+	all_cols := df.columns()!
+	for k in all_cols {
 		cols << '("${k}" in (${values_list})) as "${k}"'
 	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -559,12 +611,12 @@ pub fn (df DataFrame) isin(values []string) !DataFrame {
 pub fn (df DataFrame) value_counts() !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	cols := df.columns()
+	cols := df.columns()!
 	if cols.len == 0 {
 		return df
 	}
 	first_col := cols[0]
-	_ := db.query("create table ${id} as select \"${first_col}\", count(*) as count from ${df.id} group by \"${first_col}\" order by count desc") or { return err }
+	_ := db.query('create table ${id} as select "${first_col}", count(*) as count from ${df.id} group by "${first_col}" order by count desc') or { return err }
 	return DataFrame{
 		id: id
 		ctx: df.ctx
@@ -620,8 +672,8 @@ pub fn (df DataFrame) map(func_expr string) !DataFrame {
 
 @[params]
 pub struct RankOptions {
-	method string = 'average' // 'average', 'min', 'max', 'first', 'dense'
-	ascending bool = true
+	method    string = 'average' // 'average', 'min', 'max', 'first', 'dense'
+	ascending bool   = true
 	na_option string = 'keep' // 'keep', 'top', 'bottom'
 }
 
@@ -630,7 +682,7 @@ pub fn (df DataFrame) rank(ro RankOptions) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	
+
 	rank_func := match ro.method {
 		'min' { 'min' }
 		'max' { 'max' }
@@ -638,15 +690,16 @@ pub fn (df DataFrame) rank(ro RankOptions) !DataFrame {
 		'dense' { 'dense_rank' }
 		else { 'rank' }
 	}
-	
+
 	order := if ro.ascending { 'asc' } else { 'desc' }
 	na_behavior := match ro.na_option {
 		'top' { 'nulls first' }
 		'bottom' { 'nulls last' }
 		else { 'nulls last' }
 	}
-	
-	for k in df.columns() {
+
+	all_cols := df.columns()!
+	for k in all_cols {
 		cols << '${rank_func}() over (order by "${k}" ${order} ${na_behavior}) as "${k}"'
 	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -661,7 +714,8 @@ pub fn (df DataFrame) quantile(q f64) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k, v in df.dtypes() {
+	types := df.dtypes()!
+	for k, v in types {
 		if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
 			cols << 'quantile("${k}", ${q}) as "${k}"'
 		}
@@ -677,7 +731,8 @@ pub fn (df DataFrame) quantile(q f64) !DataFrame {
 pub fn (df DataFrame) corr() !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	cols := df.columns().filter(df.dtypes()[it] in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'])
+	types := df.dtypes()!
+	cols := types.keys().filter(types[it] in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'])
 	if cols.len < 2 {
 		return df
 	}
@@ -698,7 +753,8 @@ pub fn (df DataFrame) corr() !DataFrame {
 pub fn (df DataFrame) cov() !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	cols := df.columns().filter(df.dtypes()[it] in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'])
+	types := df.dtypes()!
+	cols := types.keys().filter(types[it] in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'])
 	if cols.len < 2 {
 		return df
 	}
@@ -717,22 +773,22 @@ pub fn (df DataFrame) cov() !DataFrame {
 
 @[params]
 pub struct RollingOptions {
-	window int = 3 // window size
-	min_periods int = 1 // minimum number of observations
-	center bool // center the window
+	window      int  = 3 // window size
+	min_periods int  = 1 // minimum number of observations
+	center      bool     // center the window
 }
 
 // Rolling window calculations
 pub fn (df DataFrame) rolling(col string, func string, ro RollingOptions) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	
+
 	frame := if ro.center {
 		'rows between ${-ro.window / 2} preceding and ${ro.window / 2} following'
 	} else {
 		'rows between ${ro.window - 1} preceding and current row'
 	}
-	
+
 	agg_func := match func {
 		'sum' { 'sum' }
 		'mean', 'avg' { 'avg' }
@@ -742,8 +798,8 @@ pub fn (df DataFrame) rolling(col string, func string, ro RollingOptions) !DataF
 		'std' { 'stddev' }
 		else { 'sum' }
 	}
-	
-	_ := db.query("create table ${id} as select ${agg_func}(\"${col}\") over (${frame}) as \"${col}_${func}\" from ${df.id}") or { return err }
+
+	_ := db.query('create table ${id} as select ${agg_func}("${col}") over (${frame}) as "${col}_${func}" from ${df.id}') or { return err }
 	return DataFrame{
 		id: id
 		ctx: df.ctx
@@ -755,7 +811,8 @@ pub fn (df DataFrame) shift(periods int) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k in df.columns() {
+	all_cols := df.columns()!
+	for k in all_cols {
 		cols << 'lag("${k}", ${periods}) over () as "${k}"'
 	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -770,7 +827,8 @@ pub fn (df DataFrame) diff() !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k in df.columns() {
+	all_cols := df.columns()!
+	for k in all_cols {
 		cols << '"${k}" - lag("${k}", 1) over () as "${k}"'
 	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -785,7 +843,8 @@ pub fn (df DataFrame) pct_change() !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	mut cols := []string{}
-	for k in df.columns() {
+	all_cols := df.columns()!
+	for k in all_cols {
 		cols << '("${k}" - lag("${k}", 1) over ()) / nullif(lag("${k}", 1) over (), 0) * 100 as "${k}"'
 	}
 	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
@@ -795,3 +854,70 @@ pub fn (df DataFrame) pct_change() !DataFrame {
 	}
 }
 
+// Cumulative sum of each numeric column
+pub fn (df DataFrame) cumsum() !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	mut cols := []string{}
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'sum("${k}") over (rows between unbounded preceding and current row) as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
+	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
+	return DataFrame{ id: id, ctx: df.ctx }
+}
+
+// Cumulative maximum of each numeric column
+pub fn (df DataFrame) cummax() !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	mut cols := []string{}
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'max("${k}") over (rows between unbounded preceding and current row) as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
+	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
+	return DataFrame{ id: id, ctx: df.ctx }
+}
+
+// Cumulative minimum of each numeric column
+pub fn (df DataFrame) cummin() !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	mut cols := []string{}
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'min("${k}") over (rows between unbounded preceding and current row) as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
+	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
+	return DataFrame{ id: id, ctx: df.ctx }
+}
+
+// Cumulative product of each numeric column
+pub fn (df DataFrame) cumprod() !DataFrame {
+	id := 'tbl_${rand.ulid()}'
+	mut db := &df.ctx.db
+	mut cols := []string{}
+	types := df.dtypes()!
+	for k, v in types {
+		cols << if v in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'] {
+			'exp(sum(ln(abs("${k}"))) over (rows between unbounded preceding and current row)) as "${k}"'
+		} else {
+			'"${k}"'
+		}
+	}
+	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
+	return DataFrame{ id: id, ctx: df.ctx }
+}
