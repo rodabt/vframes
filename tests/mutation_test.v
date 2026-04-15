@@ -199,7 +199,7 @@ fn test__sort_values_asc() {
 	]
 	mut ctx := vframes.init()!
 	df := ctx.read_records(tdata) or { panic(err) }
-	result := df.sort_values(['x'], vframes.SortOptions{ ascending: true })!
+	result := df.sort_values(['x'])!
 	rows := result.values(vframes.ValuesParams{})! as []map[string]json2.Any
 	assert rows[0]['x'] or { json2.Any(0) }.int() == 1
 	assert rows[1]['x'] or { json2.Any(0) }.int() == 2
@@ -214,7 +214,7 @@ fn test__sort_values_desc() {
 	]
 	mut ctx := vframes.init()!
 	df := ctx.read_records(tdata) or { panic(err) }
-	result := df.sort_values(['x'], vframes.SortOptions{ ascending: false })!
+	result := df.sort_values(['x'], ascending: false)!
 	rows := result.values(vframes.ValuesParams{})! as []map[string]json2.Any
 	assert rows[0]['x'] or { json2.Any(0) }.int() == 3
 	assert rows[2]['x'] or { json2.Any(0) }.int() == 1

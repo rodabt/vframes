@@ -323,7 +323,7 @@ pub fn (df DataFrame) assign(col string, expr string) !DataFrame {
 
 // Pandas alias: filter rows using a SQL condition (alias for query with condition)
 pub fn (df DataFrame) filter(condition string) !DataFrame {
-	return df.query(condition, DFConfig{})
+	return df.query(condition)
 }
 
 // Pandas alias: select a subset of columns (alias for subset)

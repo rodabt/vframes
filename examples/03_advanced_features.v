@@ -33,42 +33,42 @@ fn main() {
 	
 	df := ctx.read_records(data_with_nulls)!
 	println('Original data with missing values:')
-	df.head(10, vframes.DFConfig{})!
+	df.head(10)!
 
 	print_header('Detecting Missing Values')
 	
 	// Check which values are null
 	println('\nBoolean mask of missing values:')
 	df_isna := df.isna()!
-	df_isna.head(10, vframes.DFConfig{})!
+	df_isna.head(10)!
 	
 	// Check which values are not null
 	println('\nBoolean mask of non-missing values:')
 	df_notna := df.notna()!
-	df_notna.head(10, vframes.DFConfig{})!
+	df_notna.head(10)!
 
 	print_header('Handling Missing Values')
 	
 	// Drop rows with any NA values
 	println('\nDrop rows with any NA values:')
 	df_dropna := df.dropna(vframes.DropOptions{how: 'any'})!
-	df_dropna.head(10, vframes.DFConfig{})!
+	df_dropna.head(10)!
 	println('Shape after dropna: ${df_dropna.shape()!}')
 	
 	// Fill NA with a specific value
 	println('\nFill NA with default values:')
 	df_filled := df.fillna(vframes.FillnaOptions{value: '0'})!
-	df_filled.head(10, vframes.DFConfig{})!
+	df_filled.head(10)!
 	
 	// Forward fill (use previous non-null value)
 	println('\nForward fill NA values:')
 	df_ffill := df.ffill()!
-	df_ffill.head(10, vframes.DFConfig{})!
+	df_ffill.head(10)!
 	
 	// Backward fill (use next non-null value)
 	println('\nBackward fill NA values:')
 	df_bfill := df.bfill()!
-	df_bfill.head(10, vframes.DFConfig{})!
+	df_bfill.head(10)!
 
 	print_header('Data Transformations')
 	
@@ -83,34 +83,34 @@ fn main() {
 	
 	df_clean := ctx.read_records(clean_data)!
 	println('Clean data for transformations:')
-	df_clean.head(10, vframes.DFConfig{})!
+	df_clean.head(10)!
 	
 	// Apply absolute value
 	println('\nAbsolute values:')
 	df_abs := df_clean.abs()!
-	df_abs.head(10, vframes.DFConfig{})!
+	df_abs.head(10)!
 	
 	// Round values
 	println('\nRounded to 0 decimal places:')
 	df_rounded := df_clean.round(0)!
-	df_rounded.head(10, vframes.DFConfig{})!
+	df_rounded.head(10)!
 	
 	// Clip values to a range
 	println('\nClipped to range [0, 150]:')
 	df_clipped := df_clean.clip(0.0, 150.0)!
-	df_clipped.head(10, vframes.DFConfig{})!
+	df_clipped.head(10)!
 	
 	// Power transformation
 	println('\nSquared values:')
 	df_squared := df_clean.pow(2, vframes.FuncOptions{})!
-	df_squared.head(10, vframes.DFConfig{})!
+	df_squared.head(10)!
 
 	print_header('Type Conversions')
 	
 	// Convert column types
 	println('\nConvert value column to integer:')
 	df_converted := df_clean.astype({'value': 'int'})!
-	df_converted.head(10, vframes.DFConfig{})!
+	df_converted.head(10)!
 	println('Types after conversion: ${df_converted.dtypes()!}')
 
 	print_header('Working with Files')
@@ -143,7 +143,7 @@ fn main() {
 	// Read back the CSV file to verify
 	println('\nReading back the CSV file:')
 	df_imported := ctx.read_auto(csv_path)!
-	df_imported.head(10, vframes.DFConfig{})!
+	df_imported.head(10)!
 	
 	// Clean up temporary files
 	os.rm(csv_path) or {}
@@ -155,12 +155,12 @@ fn main() {
 	// Check if values are in a list
 	println('\nCheck if category is in ["A", "C"]:')
 	df_isin := df_clean.isin(['A', 'C'])!
-	df_isin.head(10, vframes.DFConfig{})!
+	df_isin.head(10)!
 	
 	// Replace values
 	println('\nReplace "A" with "Alpha":')
 	df_replaced := df_clean.replace('A', 'Alpha')!
-	df_replaced.head(10, vframes.DFConfig{})!
+	df_replaced.head(10)!
 
 	print_header('Advanced Features Complete')
 	println('This example demonstrated:')

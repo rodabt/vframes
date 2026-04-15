@@ -51,20 +51,20 @@ fn main() {
     // Explore
     println('Shape: ${df2.shape()!}')          // [3, 3]
     println('Columns: ${df2.columns()!}')       // ['name', 'dept', 'salary']
-    df2.head(5, vframes.DFConfig{})!
+    df2.head(5)!
 
     // Transform
     df3 := df2
         .filter('salary > 75000')!
         .add_column('bonus', 'salary * 0.1')!
-        .sort_values(['salary'], vframes.SortOptions{ascending: false})!
+        .sort_values(['salary'], ascending: false)!
 
     // Aggregate
     by_dept := df2.group_by(['dept'], {
         'avg_salary': 'avg(salary)',
         'headcount':  'count(*)',
     })!
-    by_dept.head(10, vframes.DFConfig{})!
+    by_dept.head(10)!
 
     // Export
     df3.to_csv('/tmp/result.csv', vframes.ToCsvOptions{})!

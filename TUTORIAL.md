@@ -97,11 +97,11 @@ df2 = pd.DataFrame(data)
 
 ```v
 // Print first/last N rows to stdout
-df.head(5, vframes.DFConfig{})!
-df.tail(3, vframes.DFConfig{})!
+df.head(5)!
+df.tail(3)!
 
 // Return rows as data (suppress stdout)
-rows := df.head(5, vframes.DFConfig{to_stdout: false})! as []map[string]json2.Any
+rows := df.head(5, to_stdout: false)! as []map[string]json2.Any
 
 // Shape: [rows, cols]
 shape := df.shape()!
@@ -114,10 +114,10 @@ cols := df.columns()!      // []string
 types := df.dtypes()!      // map[string]string  e.g. {'age': 'INTEGER'}
 
 // Summary statistics (count, mean, min, max, etc.)
-df.describe(vframes.DFConfig{})!
+df.describe()!
 
 // Column info (name + type per row)
-df.info(vframes.DFConfig{})!
+df.info()!
 
 // All rows as []map[string]json2.Any
 all_rows := df.values(vframes.ValuesParams{})! as []map[string]json2.Any
@@ -126,13 +126,13 @@ all_rows := df.values(vframes.ValuesParams{})! as []map[string]json2.Any
 ### Pandas
 
 ```python
-df.head(5)
-df.tail(3)
+df.head(5)!
+df.tail(3)!
 df.shape          # (rows, cols)
 df.columns        # Index of column names
 df.dtypes         # Series of types
-df.describe()
-df.info()
+df.describe()!
+df.info()!
 df.to_dict('records')
 ```
 
@@ -180,10 +180,10 @@ df2 := df.filter('age > 25')!
 df2 := df.filter('age > 25 AND city = \'NYC\'')!
 
 // Select columns AND filter (separate with WHERE)
-df2 := df.query('name, age WHERE age > 25', vframes.DFConfig{})!
+df2 := df.query('name, age WHERE age > 25')!
 
 // Full column expression (no WHERE → column transformation)
-df2 := df.query('name, age * 2 as age_doubled', vframes.DFConfig{})!
+df2 := df.query('name, age * 2 as age_doubled')!
 
 // Boolean mask: which values are in a list?
 mask := df.isin(['Alice', 'Bob'])!
@@ -250,13 +250,13 @@ df2 = df.astype({'age': float})
 
 ```v
 // Sort ascending (default)
-df2 := df.sort_values(['age'], vframes.SortOptions{})!
+df2 := df.sort_values(['age'])!
 
 // Sort descending
-df2 := df.sort_values(['salary'], vframes.SortOptions{ascending: false})!
+df2 := df.sort_values(['salary'], ascending: false)!
 
 // Sort by multiple columns
-df2 := df.sort_values(['dept', 'salary'], vframes.SortOptions{ascending: false})!
+df2 := df.sort_values(['dept', 'salary'], ascending: false)!
 ```
 
 ### Pandas
@@ -647,7 +647,7 @@ fn main() {
 
     // Explore
     println('Shape: ${df.shape()!}')
-    df.head(3, vframes.DFConfig{})!
+    df.head(3)!
 
     // Add a column
     df2 := df.add_column('bonus', 'salary * 0.1')!
@@ -656,14 +656,14 @@ fn main() {
     df3 := df2.filter('salary > 75000')!
 
     // Sort descending
-    df4 := df3.sort_values(['salary'], vframes.SortOptions{ascending: false})!
+    df4 := df3.sort_values(['salary'], ascending: false)!
 
     // Group by department
     by_dept := df.group_by(['dept'], {
         'avg_salary': 'avg(salary)',
         'headcount':  'count(*)',
     })!
-    by_dept.head(10, vframes.DFConfig{})!
+    by_dept.head(10)!
 
     // Export
     df4.to_csv('/tmp/high_earners.csv', vframes.ToCsvOptions{})!
@@ -726,13 +726,13 @@ print(df4.to_markdown(index=False))
 
 | Operation | VFrames | Pandas |
 |-----------|---------|--------|
-| Head | `df.head(n, vframes.DFConfig{})!` | `df.head(n)` |
-| Tail | `df.tail(n, vframes.DFConfig{})!` | `df.tail(n)` |
+| Head | `df.head(n)` | `df.head(n)` |
+| Tail | `df.tail(n)` | `df.tail(n)` |
 | Shape | `df.shape()!` → `[]int` | `df.shape` |
 | Columns | `df.columns()!` → `[]string` | `df.columns` |
 | Types | `df.dtypes()!` → `map[string]string` | `df.dtypes` |
-| Describe | `df.describe(vframes.DFConfig{})!` | `df.describe()` |
-| Info | `df.info(vframes.DFConfig{})!` | `df.info()` |
+| Describe | `df.describe()!` | `df.describe()` |
+| Info | `df.info()!` | `df.info()` |
 
 ### Selection & Mutation
 

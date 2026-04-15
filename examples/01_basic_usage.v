@@ -49,53 +49,53 @@ fn main() {
 	print_header('Viewing Data (First 5 rows)')
 
 	// Display first 5 rows
-	df.head(5, vframes.DFConfig{})!
+	df.head(5)!
 
 	print_header('Viewing Data (Last 3 rows)')
 
 	// Display last 3 rows
-	df.tail(3, vframes.DFConfig{})!
+	df.tail(3)!
 
 	print_header('DataFrame Info and Statistics')
 
 	// Show column information
 	println('Column info:')
-	df.info(vframes.DFConfig{})!
+	df.info()!
 
 	// Show summary statistics
 	print_header('Summary Statistics')
-	df.describe(vframes.DFConfig{})!
+	df.describe()!
 
 	print_header('Column Operations')
 
 	// Select a subset of columns
 	println('\nSelecting subset of columns (name, department, salary):')
 	df_subset := df.subset(['name', 'department', 'salary'])!
-	df_subset.head(3, vframes.DFConfig{})!
+	df_subset.head(3)!
 
 	// Add a new calculated column
 	println('\nAdding a calculated column (salary_per_year):')
 	df_with_calc := df.add_column('salary_per_year', 'salary / years')!
-	df_with_calc.head(5, vframes.DFConfig{})!
+	df_with_calc.head(5)!
 
 	// Add prefix to all columns
 	println('\nAdding prefix "emp_" to all columns:')
 	df_prefixed := df.add_prefix('emp_')!
 	println('Columns after prefix: ${df_prefixed.columns()!}')
-	df_prefixed.head(3, vframes.DFConfig{})!
+	df_prefixed.head(3)!
 
 	// Delete a column
 	println('\nDeleting the "years" column:')
 	df_deleted := df.delete_column('years')!
 	println('Columns after deletion: ${df_deleted.columns()!}')
-	df_deleted.head(3, vframes.DFConfig{})!
+	df_deleted.head(3)!
 
 	print_header('Slicing Data')
 
 	// Get rows 3-5 (inclusive)
 	println('\nSlicing rows 3-5:')
 	df_sliced := df.slice(3, 5)!
-	df_sliced.head(10, vframes.DFConfig{})!
+	df_sliced.head(10)!
 
 	print_header('Basic Usage Complete')
 	println('This example demonstrated:')

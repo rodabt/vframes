@@ -35,7 +35,7 @@ fn main() {
 	
 	df := ctx.read_records(sales_data)!
 	println('Loaded ${(df.shape()!)[0]} rows')
-	df.head(10, vframes.DFConfig{})!
+	df.head(10)!
 
 	print_header('Grouping and Aggregation')
 	
@@ -47,7 +47,7 @@ fn main() {
 		'total_quantity': 'sum(quantity)',
 		'count': 'count(*)'
 	})!
-	df_by_region.head(10, vframes.DFConfig{})!
+	df_by_region.head(10)!
 
 	// Group by multiple columns
 	println('\nGroup by region and product:')
@@ -55,81 +55,81 @@ fn main() {
 		'total_sales': 'sum(sales)',
 		'avg_quantity': 'avg(quantity)'
 	})!
-	df_by_region_product.head(10, vframes.DFConfig{})!
+	df_by_region_product.head(10)!
 
 	print_header('Mathematical Operations')
 
 	// Add calculated columns
 	println('\nAdding price_per_unit column (sales / quantity):')
 	df_with_price := df.add_column('price_per_unit', 'sales / quantity')!
-	df_with_price.head(5, vframes.DFConfig{})!
+	df_with_price.head(5)!
 
 	// Perform arithmetic operations on the entire DataFrame
 	println('\nAdding 1000 to all numeric values:')
 	df_plus_1000 := df.add(1000)!
-	df_plus_1000.head(3, vframes.DFConfig{})!
+	df_plus_1000.head(3)!
 
 	println('\nMultiplying sales by 1.1 (10%% increase):')
 	// First select only numeric columns, then multiply
 	df_increased := df.add_column('sales_increased', 'sales * 1.1')!
-	df_increased.head(5, vframes.DFConfig{})!
+	df_increased.head(5)!
 
 	print_header('Statistical Functions')
 	
 	// Calculate aggregates across all rows
 	println('\nSum of all numeric columns:')
 	df_sum := df.sum(vframes.FuncOptions{})!
-	df_sum.head(5, vframes.DFConfig{})!
+	df_sum.head(5)!
 	
 	println('\nMean of all numeric columns:')
 	df_mean := df.mean(vframes.FuncOptions{})!
-	df_mean.head(5, vframes.DFConfig{})!
+	df_mean.head(5)!
 	
 	println('\nStandard deviation:')
 	df_std := df.std()!
-	df_std.head(5, vframes.DFConfig{})!
+	df_std.head(5)!
 	
 	println('\nCount of non-null values:')
 	df_count := df.count()!
-	df_count.head(5, vframes.DFConfig{})!
+	df_count.head(5)!
 
 	print_header('Filtering with Queries')
 	
 	// Use SQL-like queries for complex filtering
 	println('\nFilter: sales > 40000')
-	df_filtered := df.query('sales > 40000', vframes.DFConfig{})!
-	df_filtered.head(10, vframes.DFConfig{})!
+	df_filtered := df.query('sales > 40000')!
+	df_filtered.head(10)!
 	
 	println('\nFilter: region = "North" AND month = 2')
-	df_filtered2 := df.query('region = \'North\' AND month = 2', vframes.DFConfig{})!
-	df_filtered2.head(10, vframes.DFConfig{})!
+	df_filtered2 := df.query('region = \'North\' AND month = 2')!
+	df_filtered2.head(10)!
 	
 	println('\nSelect specific columns with WHERE:')
-	df_selected := df.query('region, product, sales WHERE sales > 30000', vframes.DFConfig{})!
-	df_selected.head(10, vframes.DFConfig{})!
+	df_selected := df.query('region, product, sales WHERE sales > 30000')!
+	df_selected.head(10)!
 
 	print_header('Finding Extremes')
 	
 	// Get top N rows by numeric columns
 	println('\nTop 3 sales records:')
 	df_top3 := df.nlargest(3)!
-	df_top3.head(10, vframes.DFConfig{})!
+	df_top3.head(10)!
 	
 	println('\nBottom 3 sales records:')
 	df_bottom3 := df.nsmallest(3)!
-	df_bottom3.head(10, vframes.DFConfig{})!
+	df_bottom3.head(10)!
 
 	print_header('Value Analysis')
 	
 	// Count unique values
 	println('\nCount of unique values in each column:')
 	df_nunique := df.nunique()!
-	df_nunique.head(5, vframes.DFConfig{})!
+	df_nunique.head(5)!
 	
 	// Get value counts for the first column (region)
 	println('\nValue counts for first column:')
 	df_value_counts := df.value_counts()!
-	df_value_counts.head(10, vframes.DFConfig{})!
+	df_value_counts.head(10)!
 
 	print_header('Data Analysis Complete')
 	println('This example demonstrated:')

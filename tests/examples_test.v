@@ -69,7 +69,7 @@ fn test_grouping_and_aggregation() {
 	assert 'total_sales' in grouped_cols
 	assert 'avg_quantity' in grouped_cols
 
-	df_filtered := df.query('sales > 30000', vframes.DFConfig{})!
+	df_filtered := df.query('sales > 30000')!
 	filtered_shape := df_filtered.shape()!
 	assert filtered_shape[0] == 2  // two rows with sales > 30000
 
@@ -237,11 +237,11 @@ fn test_dataframe_info_and_describe() {
 
 	df := ctx.read_records(data)!
 
-	info_result := df.info(vframes.DFConfig{to_stdout: false})! as []map[string]json2.Any
+	info_result := df.info(to_stdout: false)! as []map[string]json2.Any
 	// info returns one row per column
 	assert info_result.len == 3
 
-	describe_result := df.describe(vframes.DFConfig{to_stdout: false})! as []map[string]json2.Any
+	describe_result := df.describe(to_stdout: false)! as []map[string]json2.Any
 	// describe returns one row per column
 	assert describe_result.len == 3
 }
@@ -260,10 +260,10 @@ fn test_head_and_tail() {
 
 	df := ctx.read_records(data)!
 
-	head_result := df.head(3, vframes.DFConfig{to_stdout: false})! as []map[string]json2.Any
+	head_result := df.head(3, to_stdout: false)! as []map[string]json2.Any
 	assert head_result.len == 3
 
-	tail_result := df.tail(2, vframes.DFConfig{to_stdout: false})! as []map[string]json2.Any
+	tail_result := df.tail(2, to_stdout: false)! as []map[string]json2.Any
 	assert tail_result.len == 2
 	// last two rows are David (4) and Eve (5)
 	assert tail_result[1]['id'] or { json2.Any(0) }.int() == 5
