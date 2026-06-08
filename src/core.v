@@ -12,6 +12,7 @@ pub fn init(cfg ContextConfig) !DataFrameContext {
 	return DataFrameContext{
 		dpath: cfg.location
 		db: db
+		view_depth_warning: cfg.view_depth_warning
 	}
 }
 
