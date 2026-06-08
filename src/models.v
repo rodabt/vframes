@@ -23,6 +23,7 @@ struct DataFrameContext {
 	dpath				string
 mut:
 	db					vduckdb.DuckDB
+	loaded_extensions	map[string]bool
 }
 
 @[noinit]
