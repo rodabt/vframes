@@ -8,22 +8,23 @@ A side-by-side guide for Python/Pandas developers learning VFrames.
 
 1. [Initialization](#initialization)
 2. [Loading Data](#loading-data)
-3. [Exploring Data](#exploring-data)
-4. [Selecting Columns](#selecting-columns)
-5. [Filtering Rows](#filtering-rows)
-6. [Adding, Deleting & Renaming Columns](#adding-deleting--renaming-columns)
-7. [Sorting](#sorting)
-8. [Grouping and Aggregation](#grouping-and-aggregation)
-9. [Merging DataFrames](#merging-dataframes)
-10. [Reshaping Data](#reshaping-data)
-11. [Handling Missing Values](#handling-missing-values)
-12. [Mathematical Operations](#mathematical-operations)
-13. [Statistical Functions](#statistical-functions)
-14. [Cumulative Functions](#cumulative-functions)
-15. [Time-Series Operations](#time-series-operations)
-16. [Exporting Data](#exporting-data)
-17. [Complete Example](#complete-example)
-18. [Quick Reference](#quick-reference)
+3. [Databases & Cloud](#databases--cloud)
+4. [Exploring Data](#exploring-data)
+5. [Selecting Columns](#selecting-columns)
+6. [Filtering Rows](#filtering-rows)
+7. [Adding, Deleting & Renaming Columns](#adding-deleting--renaming-columns)
+8. [Sorting](#sorting)
+9. [Grouping and Aggregation](#grouping-and-aggregation)
+10. [Merging DataFrames](#merging-dataframes)
+11. [Reshaping Data](#reshaping-data)
+12. [Handling Missing Values](#handling-missing-values)
+13. [Mathematical Operations](#mathematical-operations)
+14. [Statistical Functions](#statistical-functions)
+15. [Cumulative Functions](#cumulative-functions)
+16. [Time-Series Operations](#time-series-operations)
+17. [Exporting Data](#exporting-data)
+18. [Complete Example](#complete-example)
+19. [Quick Reference](#quick-reference)
 
 ---
 
@@ -66,8 +67,14 @@ fn main() {
     mut ctx := vframes.init()!
     defer { ctx.close() }
 
-    // Auto-detect format from file extension (CSV, JSON, Parquet)
+    // Auto-detect format from file extension (CSV, JSON, Parquet, Excel; local or remote)
     df := ctx.read_auto('data.csv')!
+
+    // Explicit readers with options
+    csv  := ctx.read_csv('data.csv', delimiter: ';', columns: {'id': 'VARCHAR'})!
+    pq   := ctx.read_parquet('logs/*.parquet')!          // glob: union of many files
+    xl   := ctx.read_excel('report.xlsx', sheet: 'Q1')!  // needs the 'excel' extension
+    web  := ctx.read_json('https://host/data.json')!     // remote: needs 'httpfs'
 
     // From in-memory records — values must be wrapped in json2.Any
     data := [
@@ -78,6 +85,9 @@ fn main() {
 }
 ```
 
+> DuckDB extensions for remote (`httpfs`), Excel (`excel`), and database
+> (`postgres`/`mysql`/`sqlite`) access are installed automatically on first use.
+
 ### Pandas
 
 ```python
@@ -87,6 +97,45 @@ df = pd.read_csv('data.csv')
 
 data = [{'name': 'Alice', 'age': 30}, {'name': 'Bob', 'age': 25}]
 df2 = pd.DataFrame(data)
+```
+
+---
+
+## Databases & Cloud
+
+### VFrames
+
+```v
+// Attach a live database (Postgres / MySQL / SQLite / DuckDB) under an alias.
+ctx.attach('warehouse.db', alias: 'wh', db_type: .sqlite)!
+
+// Read an attached table or run a query against it.
+orders := ctx.read_table('wh.orders')!
+recent := ctx.read_sql("SELECT * FROM wh.orders WHERE ts > '2026-01-01'")!
+
+// Write a DataFrame back into the attached database.
+recent.to_sql('orders_recent', alias: 'wh', if_exists: 'replace')!
+ctx.detach('wh')!
+
+// One-shot: attach, read, detach in a single call.
+df := ctx.read_database('warehouse.db', 'SELECT count(*) FROM w.orders',
+    alias: 'w', db_type: .sqlite)!
+
+// Cloud credentials for S3-backed reads.
+ctx.set_s3_credentials(key_id: '...', secret: '...', region: 'us-west-2')!
+remote := ctx.read_parquet('s3://bucket/year=2026/*.parquet')!
+```
+
+### Pandas
+
+```python
+from sqlalchemy import create_engine
+
+engine = create_engine('sqlite:///warehouse.db')
+orders = pd.read_sql('SELECT * FROM orders', engine)
+recent.to_sql('orders_recent', engine, if_exists='replace')
+
+remote = pd.read_parquet('s3://bucket/year=2026/', storage_options={...})
 ```
 
 ---
@@ -602,11 +651,18 @@ df.to_json('output.json')!
 // To Parquet
 df.to_parquet('output.parquet')!
 
+// To Excel (needs the 'excel' extension, auto-installed)
+df.to_excel('output.xlsx', sheet: 'Results')!
+
+// To a table inside an attached database
+df.to_sql('results', alias: 'wh', if_exists: 'replace')!
+
 // To in-memory slice
 rows := df.to_dict()!   // []map[string]json2.Any
 
-// To Markdown table string
-md := df.to_markdown()!
+// To Markdown / HTML table strings
+md   := df.to_markdown()!
+html := df.to_html()!
 println(md)
 ```
 
@@ -617,8 +673,11 @@ df.to_csv('output.csv', index=False)
 df.to_csv('output.tsv', sep='\t')
 df.to_json('output.json', orient='records', lines=True)
 df.to_parquet('output.parquet')
+df.to_excel('output.xlsx', sheet_name='Results', index=False)
+df.to_sql('results', engine, if_exists='replace')
 rows = df.to_dict('records')
 df.to_markdown()
+df.to_html()
 ```
 
 ---
