@@ -61,3 +61,25 @@ fn test_read_csv_type_override() {
 	types := df.dtypes()!
 	assert types['id'].to_upper().contains('VARCHAR')
 }
+
+fn test_read_parquet_local() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	// Existing fixture shipped in the repo.
+	df := ctx.read_parquet('examples/titanic.parquet')!
+	assert df.shape()![0] > 0
+	assert df.columns()!.len > 0
+}
+
+fn test_read_json_local() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	tmp := os.join_path_single(os.temp_dir(), 'vframes_rj_${os.getpid()}.json')
+	os.write_file(tmp, '[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]')!
+	defer { os.rm(tmp) or {} }
+
+	df := ctx.read_json(tmp, format: 'array')!
+	assert df.shape()![0] == 2
+}

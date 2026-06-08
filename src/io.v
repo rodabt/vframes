@@ -128,6 +128,72 @@ pub fn (mut ctx DataFrameContext) read_csv(path string, opts ReadCsvOptions) !Da
 	}
 }
 
+@[params]
+pub struct ReadParquetOptions {
+pub:
+	union_by_name     bool // union files by column name when globbing
+	hive_partitioning bool
+}
+
+// Reads a Parquet file (local or remote) into a new DataFrame. Supports glob patterns.
+pub fn (mut ctx DataFrameContext) read_parquet(path string, opts ReadParquetOptions) !DataFrame {
+	if is_remote_path(path) {
+		ctx.ensure_extension('httpfs')!
+	}
+	mut args := []string{}
+	if opts.union_by_name {
+		args << 'union_by_name=true'
+	}
+	if opts.hive_partitioning {
+		args << 'hive_partitioning=true'
+	}
+	arg_str := if args.len > 0 { ', ' + args.join(', ') } else { '' }
+	id := 'tbl_${rand.ulid()}'
+	mut db := &ctx.db
+	db.query("create table ${id} as select * from read_parquet('${path}'${arg_str})") or {
+		return error('Failed to read Parquet "${path}": ${err.msg()}')
+	}
+	return DataFrame{
+		id: id
+		ctx: ctx
+	}
+}
+
+@[params]
+pub struct ReadJsonOptions {
+pub:
+	format  string            // '' (auto) | 'array' | 'newline_delimited' | 'unstructured'
+	columns map[string]string // explicit name -> SQL type overrides
+}
+
+// Reads a JSON file (local or remote) into a new DataFrame.
+pub fn (mut ctx DataFrameContext) read_json(path string, opts ReadJsonOptions) !DataFrame {
+	if is_remote_path(path) {
+		ctx.ensure_extension('httpfs')!
+	}
+	mut args := []string{}
+	if opts.format != '' {
+		args << "format='${opts.format}'"
+	}
+	if opts.columns.len > 0 {
+		mut pairs := []string{}
+		for k, v in opts.columns {
+			pairs << "'${k}': '${v}'"
+		}
+		args << 'columns={${pairs.join(', ')}}'
+	}
+	arg_str := if args.len > 0 { ', ' + args.join(', ') } else { '' }
+	id := 'tbl_${rand.ulid()}'
+	mut db := &ctx.db
+	db.query("create table ${id} as select * from read_json('${path}'${arg_str})") or {
+		return error('Failed to read JSON "${path}": ${err.msg()}')
+	}
+	return DataFrame{
+		id: id
+		ctx: ctx
+	}
+}
+
 // Returns true if the path points at a remote/cloud location (needs the httpfs extension).
 pub fn is_remote_path(path string) bool {
 	prefixes := ['http://', 'https://', 's3://', 'gs://', 'az://', 'azure://', 'r2://']
