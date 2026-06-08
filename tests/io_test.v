@@ -125,3 +125,15 @@ fn test_read_auto_local_csv_still_works() {
 	df := ctx.read_auto(tmp)!
 	assert df.shape()![0] == 1
 }
+
+fn test_to_html() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	df := ctx.read_sql("SELECT 'Alice' AS name, 30 AS age UNION ALL SELECT 'Bob', 25")!
+	html := df.to_html()!
+	assert html.contains('<table')
+	assert html.contains('<th>name</th>')
+	assert html.contains('<td>Alice</td>')
+	assert html.contains('</table>')
+}

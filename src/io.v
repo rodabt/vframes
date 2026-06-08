@@ -252,6 +252,29 @@ pub fn (df DataFrame) to_excel(path string, opts ToExcelOptions) ! {
 	}
 }
 
+// Returns the DataFrame as an HTML <table> string.
+pub fn (df DataFrame) to_html() !string {
+	mut db := &df.ctx.db
+	db.query('SELECT * FROM ${df.id}') or { return err }
+	cols := db.columns.keys()
+	rows := db.get_array()
+
+	mut lines := []string{}
+	lines << '<table>'
+	lines << '  <thead>'
+	header_cells := cols.map('<th>${it}</th>').join('')
+	lines << '    <tr>${header_cells}</tr>'
+	lines << '  </thead>'
+	lines << '  <tbody>'
+	for row in rows {
+		cells := cols.map('<td>${(row[it] or { json2.Any('') }).str()}</td>').join('')
+		lines << '    <tr>${cells}</tr>'
+	}
+	lines << '  </tbody>'
+	lines << '</table>'
+	return lines.join('\n')
+}
+
 // Returns true if the path points at a remote/cloud location (needs the httpfs extension).
 pub fn is_remote_path(path string) bool {
 	prefixes := ['http://', 'https://', 's3://', 'gs://', 'az://', 'azure://', 'r2://']
