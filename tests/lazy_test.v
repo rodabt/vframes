@@ -79,6 +79,29 @@ fn test_eq_on_views() {
 	assert res.columns()! == ['a', 'b']
 }
 
+fn test_mutation_ops_are_views() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	data := [
+		{'a': json2.Any(1), 'b': json2.Any(10)},
+		{'a': json2.Any(2), 'b': json2.Any(20)},
+		{'a': json2.Any(3), 'b': json2.Any(30)},
+	]
+	df := ctx.read_records(data)!
+
+	filtered := df.filter('a > 1')!
+	assert filtered.object_type()! == 'VIEW'
+	assert filtered.shape()![0] == 2
+
+	sub := df.subset(['a'])!
+	assert sub.object_type()! == 'VIEW'
+	assert sub.columns()!.len == 1
+
+	sorted := df.sort_values(['b'], ascending: false)!
+	assert sorted.object_type()! == 'VIEW'
+}
+
 fn test_bfill_on_view() {
 	mut ctx := vframes.init()!
 	defer { ctx.close() }

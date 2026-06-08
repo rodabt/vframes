@@ -4,114 +4,66 @@ import rand
 
 // Deletes a column from the DataFrame
 pub fn (df DataFrame) delete_column(col string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select * exclude(${col}) from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select * exclude(${col}) from ${df.id}', df.depth)
 }
 
 // Adds a new column to DataFrame where `expr` should be a valid expression (see examples)
 pub fn (df DataFrame) add_column(col string, expr string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select *, ${expr} as ${col} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select *, ${expr} as ${col} from ${df.id}', df.depth)
 }
 
 // Returns a subset of the DataFrame columns passed as an array
 pub fn (df DataFrame) subset(cols []string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Returns a subset of rows between `start` row and `end` row (both inclusive)
 pub fn (df DataFrame) slice(start int, end int) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
 	offset := start - 1
 	limit := end - start + 1
-	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select * from ${df.id} limit ${limit} offset ${offset}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select * from ${df.id} limit ${limit} offset ${offset}', df.depth)
 }
 
 // Performs a group by operation where `dimensions` is an array of grouping labels, and metrics is a map of columns metrics and grouping operations (see examples)
 pub fn (df DataFrame) group_by(dimensions []string, metrics map[string]string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut sets := []string{}
-	for k,v in metrics {
+	for k, v in metrics {
 		sets << '${v} as ${k}'
 	}
-	_ := db.query("create table ${id} as select ${dimensions.join(',')}, ${sets.join(',')} from ${df.id} group by ${dimensions.join(',')}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${dimensions.join(',')}, ${sets.join(',')} from ${df.id} group by ${dimensions.join(',')}',
+		df.depth)
 }
-
 
 // Allows you to filter rows or select/transform columns using a SQL expression.
 // - Pure condition: `df.query("sales > 40000")` → SELECT * WHERE sales > 40000
 // - Select + filter: `df.query("name, age WHERE age > 25")` → SELECT name, age WHERE age > 25
 // - Column expressions: `df.query("value*2 as new_value, lower(name) as lower_name")`
 pub fn (df DataFrame) query(q string, dconf DFConfig) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	q_upper := q.to_upper()
-	sql_str := if where_idx := q_upper.index(' WHERE ') {
+	body := if where_idx := q_upper.index(' WHERE ') {
 		cols := q[..where_idx].trim_space()
 		cond := q[where_idx + 7..]
 		select_cols := if cols == '' || cols == '*' { '*' } else { cols }
-		'CREATE TABLE ${id} AS SELECT ${select_cols} FROM ${df.id} WHERE ${cond}'
+		'SELECT ${select_cols} FROM ${df.id} WHERE ${cond}'
 	} else if q_upper.contains('>') || q_upper.contains('<') || q_upper.contains(' = ')
 		|| q_upper.contains(' IN ') || q_upper.contains(' IS ') || q_upper.contains(' LIKE ') {
-		'CREATE TABLE ${id} AS SELECT * FROM ${df.id} WHERE ${q}'
+		'SELECT * FROM ${df.id} WHERE ${q}'
 	} else {
-		'CREATE TABLE ${id} AS SELECT ${q} FROM ${df.id}'
+		'SELECT ${q} FROM ${df.id}'
 	}
-	_ := db.query(sql_str) or {
-		return error("Invalid query syntax: ${err.msg()}")
-	}
-	return DataFrame{
-		id: id
-		ctx: df.ctx
+	return df.derive(body, df.depth) or {
+		return error('Invalid query syntax: ${err.msg()}')
 	}
 }
 
 // Adds prefix `prefix` to every column
 pub fn (df DataFrame) add_prefix(prefix string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select columns('(.*)') as '${prefix}_\\1' from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive("select columns('(.*)') as '${prefix}_\\1' from ${df.id}", df.depth)
 }
 
 // Adds suffix `suffix` to every column
 pub fn (df DataFrame) add_suffix(suffix string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select columns('(.*)') as '\\1_${suffix}' from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive("select columns('(.*)') as '\\1_${suffix}' from ${df.id}", df.depth)
 }
 
 @[params]
@@ -124,27 +76,19 @@ pub:
 	nullstr string = 'null'
 }
 
-// Drops NA rows or columns from DataFrame. If how is 'any', it drops the row/column if any NA values are present. 
+// Drops NA rows or columns from DataFrame. If how is 'any', it drops the row/column if any NA values are present.
 // If how is 'all', it drops the row/column if all NA values are present
 // If subset is passed, it only considers the columns passed in the subset as final columns for output
 pub fn (df DataFrame) dropna(do DropOptions) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	all_cols := df.columns()!
 	selected_columns := if do.subset.len > 0 { do.subset } else { all_cols }
 	conn := if do.how == 'any' { 'and' } else { 'or' }
 	predicate := all_cols.map('${it} is not null').join(' ${conn} ')
-	_ := db.query("create table ${id} as select ${selected_columns.join(',')} from ${df.id} where ${predicate}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${selected_columns.join(',')} from ${df.id} where ${predicate}', df.depth)
 }
 
 // Renames columns using a mapper
 pub fn (df DataFrame) rename(mapper map[string]string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	all_cols := df.columns()!
 	for k in all_cols {
@@ -155,11 +99,7 @@ pub fn (df DataFrame) rename(mapper map[string]string) !DataFrame {
 			cols << k
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Rename axis (alias for rename - currently just returns same dataframe)
@@ -169,16 +109,10 @@ pub fn (df DataFrame) rename_axis(name string) !DataFrame {
 
 // Removes duplicate rows
 pub fn (df DataFrame) drop_duplicates(subset []string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	all_cols := df.columns()!
 	cols := if subset.len > 0 { subset } else { all_cols }
 	cols_str := cols.map('"${it}"').join(', ')
-	_ := db.query("create table ${id} as select distinct ${cols_str} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select distinct ${cols_str} from ${df.id}', df.depth)
 }
 
 @[params]
@@ -191,18 +125,11 @@ pub:
 
 // Returns a random sample of rows
 pub fn (df DataFrame) sample(so SampleOptions) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	
 	total_rows := (df.shape()!)[0]
 	sample_size := if so.n > 0 { so.n } else { int(f64(total_rows) * so.frac) }
-	
+
 	replacement := if so.replace { 'with replacement' } else { '' }
-	_ := db.query("create table ${id} as select * from ${df.id} using sample ${sample_size}${replacement}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select * from ${df.id} using sample ${sample_size}${replacement}', df.depth)
 }
 
 @[params]
@@ -218,7 +145,7 @@ pub:
 pub fn (df DataFrame) merge(other DataFrame, mo MergeOptions) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	
+
 	how_sql := match mo.how {
 		'left' { 'left join' }
 		'right' { 'right join' }
@@ -226,10 +153,10 @@ pub fn (df DataFrame) merge(other DataFrame, mo MergeOptions) !DataFrame {
 		'cross' { 'cross join' }
 		else { 'inner join' }
 	}
-	
+
 	suffix_left := if mo.left_on != '' { mo.left_on } else { mo.on }
 	suffix_right := if mo.right_on != '' { mo.right_on } else { mo.on }
-	
+
 	query := "create table ${id} as select * from ${df.id} t1 ${how_sql} ${other.id} t2 on t1.\"${suffix_left}\" = t2.\"${suffix_right}\""
 	_ := db.query(query) or { return err }
 	return DataFrame{
@@ -251,10 +178,10 @@ pub fn concat(dfs []DataFrame) !DataFrame {
 	if dfs.len == 1 {
 		return dfs[0]
 	}
-	
+
 	id := 'tbl_${rand.ulid()}'
 	mut db := &dfs[0].ctx.db
-	
+
 	table_names := dfs.map(it.id).join(', ')
 	_ := db.query("create table ${id} as select * from ${table_names}") or { return err }
 	return DataFrame{
@@ -302,7 +229,7 @@ pub:
 pub fn (df DataFrame) melt(mo MeltOptions) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
-	
+
 	id_cols := mo.id_vars.map('"${it}"').join(', ')
 	mut queries := []string{}
 	for val_col in mo.value_vars {
@@ -333,14 +260,8 @@ pub fn (df DataFrame) select_cols(cols []string) !DataFrame {
 
 // Pandas alias: drop one or more columns (alias for delete_column, supports multiple)
 pub fn (df DataFrame) drop(cols []string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	exclude := cols.map('"${it}"').join(', ')
-	_ := db.query('CREATE TABLE ${id} AS SELECT * EXCLUDE (${exclude}) FROM ${df.id}') or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('SELECT * EXCLUDE (${exclude}) FROM ${df.id}', df.depth)
 }
 
 // Pandas alias: group_by (alias with same signature)
@@ -356,13 +277,7 @@ pub:
 
 // Sorts the DataFrame by one or more columns
 pub fn (df DataFrame) sort_values(cols []string, so SortOptions) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	direction := if so.ascending { 'ASC' } else { 'DESC' }
 	order_cols := cols.map('"${it}" ${direction}').join(', ')
-	_ := db.query('CREATE TABLE ${id} AS SELECT * FROM ${df.id} ORDER BY ${order_cols}') or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('SELECT * FROM ${df.id} ORDER BY ${order_cols}', df.depth)
 }
