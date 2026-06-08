@@ -194,6 +194,58 @@ pub fn (mut ctx DataFrameContext) read_json(path string, opts ReadJsonOptions) !
 	}
 }
 
+@[params]
+pub struct ReadExcelOptions {
+pub:
+	sheet  string      // sheet name; '' = first sheet
+	range  string      // cell range, e.g. 'A1:D100'; '' = full sheet
+	header bool = true
+}
+
+// Reads an Excel (.xlsx) file into a new DataFrame using the DuckDB 'excel' extension.
+pub fn (mut ctx DataFrameContext) read_excel(path string, opts ReadExcelOptions) !DataFrame {
+	ctx.ensure_extension('excel')!
+	if is_remote_path(path) {
+		ctx.ensure_extension('httpfs')!
+	}
+	mut args := []string{}
+	if opts.sheet != '' {
+		args << "sheet='${opts.sheet}'"
+	}
+	if opts.range != '' {
+		args << "range='${opts.range}'"
+	}
+	args << 'header=${opts.header}'
+	arg_str := ', ' + args.join(', ')
+	id := 'tbl_${rand.ulid()}'
+	mut db := &ctx.db
+	db.query("create table ${id} as select * from read_xlsx('${path}'${arg_str})") or {
+		return error('Failed to read Excel "${path}": ${err.msg()}')
+	}
+	return DataFrame{
+		id: id
+		ctx: ctx
+	}
+}
+
+@[params]
+pub struct ToExcelOptions {
+pub:
+	header bool = true
+	sheet  string = 'Sheet1'
+}
+
+// Exports the DataFrame to an Excel (.xlsx) file using the DuckDB 'excel' extension.
+pub fn (df DataFrame) to_excel(path string, opts ToExcelOptions) ! {
+	mut ctx := df.ctx
+	ctx.ensure_extension('excel')!
+	mut db := &df.ctx.db
+	header_stmt := if opts.header { 'true' } else { 'false' }
+	db.query("COPY (SELECT * FROM ${df.id}) TO '${path}' (FORMAT xlsx, HEADER ${header_stmt}, SHEET '${opts.sheet}')") or {
+		return error('Failed to write Excel "${path}": ${err.msg()}')
+	}
+}
+
 // Returns true if the path points at a remote/cloud location (needs the httpfs extension).
 pub fn is_remote_path(path string) bool {
 	prefixes := ['http://', 'https://', 's3://', 'gs://', 'az://', 'azure://', 'r2://']

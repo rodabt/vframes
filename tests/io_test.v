@@ -1,4 +1,5 @@
 import vframes
+import x.json2
 import os
 
 fn test_is_remote_path() {
@@ -82,4 +83,25 @@ fn test_read_json_local() {
 
 	df := ctx.read_json(tmp, format: 'array')!
 	assert df.shape()![0] == 2
+}
+
+// (network) Requires the DuckDB 'excel' extension.
+fn test_excel_round_trip() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	data := [
+		{'id': json2.Any(1), 'name': json2.Any('Alice')},
+		{'id': json2.Any(2), 'name': json2.Any('Bob')},
+	]
+	df := ctx.read_records(data)!
+
+	xlsx_path := os.join_path_single(os.temp_dir(), 'vframes_xl_${os.getpid()}.xlsx')
+	defer { os.rm(xlsx_path) or {} }
+
+	df.to_excel(xlsx_path)!
+	assert os.is_file(xlsx_path)
+
+	df2 := ctx.read_excel(xlsx_path)!
+	assert df2.shape()![0] == 2
 }
