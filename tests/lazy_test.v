@@ -154,3 +154,28 @@ fn test_bfill_on_view() {
 	filled := v.bfill()!
 	assert filled.shape()![0] == 2
 }
+
+fn test_depth_and_collect_reset() {
+	// low threshold so we can exercise the warning path without huge chains
+	mut ctx := vframes.init(view_depth_warning: 3)!
+	defer { ctx.close() }
+
+	data := [
+		{'x': json2.Any(1)},
+		{'x': json2.Any(2)},
+	]
+	mut df := ctx.read_records(data)!
+	assert df.chain_depth() == 0
+
+	// build a chain past the threshold; should not error (warning only)
+	for _ in 0 .. 5 {
+		df = df.add(0)!
+	}
+	assert df.chain_depth() == 5
+
+	// collect resets depth and materializes
+	c := df.collect()!
+	assert c.chain_depth() == 0
+	assert c.object_type()! == 'BASE TABLE'
+	assert c.shape()![0] == 2
+}
