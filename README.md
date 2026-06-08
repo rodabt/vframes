@@ -10,7 +10,9 @@ VFrames provides a familiar data-manipulation API for V developers, backed by an
 
 - **Pandas-like API** — familiar method names for data scientists coming from Python
 - **DuckDB backend** — vectorized execution, analytical SQL functions, columnar storage
-- **Multiple file formats** — read and write CSV, JSON, and Parquet with auto-detection
+- **Multiple file formats** — read and write CSV, JSON, Parquet, and Excel, with auto-detection
+- **Remote & cloud sources** — read directly from HTTPS URLs and S3 (and other cloud schemes)
+- **Live databases** — attach and query Postgres, MySQL, SQLite, and DuckDB databases
 - **Immutable design** — every operation returns a new DataFrame; originals are never mutated
 - **Full error propagation** — no hidden panics; errors surface as V result types (`!T`)
 - **Rich function set** — filtering, grouping, joins, pivots, rolling windows, cumulative ops, and more
@@ -111,13 +113,59 @@ df := ctx.read_auto('missing.csv') or {         // handle gracefully
 
 | Function | Description |
 |----------|-------------|
-| `ctx.read_auto(path)!` | Read CSV / JSON / Parquet, auto-detected |
+| `ctx.read_auto(path)!` | Read CSV / JSON / Parquet / Excel (local or remote), auto-detected |
+| `ctx.read_csv(path, opts)!` | Read CSV with options (delimiter, header, column types, glob) |
+| `ctx.read_json(path, opts)!` | Read JSON (local or remote) |
+| `ctx.read_parquet(path, opts)!` | Read Parquet, supports glob and remote URLs |
+| `ctx.read_excel(path, opts)!` | Read an `.xlsx` file (`excel` extension) |
 | `ctx.read_records(data)!` | Load from `[]map[string]json2.Any` |
 | `df.to_csv(path, opts)!` | Export to CSV |
 | `df.to_json(path)!` | Export to newline-delimited JSON |
 | `df.to_parquet(path)!` | Export to Parquet |
+| `df.to_excel(path, opts)!` | Export to `.xlsx` (`excel` extension) |
 | `df.to_dict()!` | Return all rows as `[]map[string]json2.Any` |
 | `df.to_markdown()!` | Return DataFrame as a Markdown table string |
+| `df.to_html()!` | Return DataFrame as an HTML `<table>` string |
+
+DuckDB extensions required by remote, Excel, and database I/O (`httpfs`, `excel`,
+`postgres`/`mysql`/`sqlite`) are auto-installed on first use.
+
+### Loading data
+
+```v
+df := ctx.read_csv('data.csv', delimiter: ';')!          // local or remote
+df := ctx.read_parquet('s3://bucket/*.parquet')!         // glob + cloud
+df := ctx.read_excel('report.xlsx', sheet: 'Q1')!        // Excel
+df := ctx.read_json('https://host/data.json')!           // remote JSON
+```
+
+### Databases
+
+```v
+ctx.attach('host.db', alias: 'src', db_type: .sqlite)!
+people := ctx.read_table('src.people')!
+people.to_sql('backup', alias: 'src', if_exists: 'replace')!
+ctx.detach('src')!
+
+// one-shot: attach, read, detach
+df := ctx.read_database('host.db', 'SELECT * FROM s.t', alias: 's', db_type: .sqlite)!
+
+// raw SQL escape hatch against any loaded/attached table
+df2 := ctx.read_sql('SELECT * FROM src.people WHERE age > 30')!
+```
+
+### Cloud credentials
+
+```v
+ctx.set_s3_credentials(key_id: '...', secret: '...', region: 'us-west-2')!
+```
+
+### Exporting
+
+```v
+df.to_excel('out.xlsx')!
+html := df.to_html()!
+```
 
 ### Exploration
 

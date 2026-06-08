@@ -1,0 +1,139 @@
+import vframes
+import x.json2
+import os
+
+fn test_is_remote_path() {
+	assert vframes.is_remote_path('https://example.com/data.csv') == true
+	assert vframes.is_remote_path('http://example.com/data.csv') == true
+	assert vframes.is_remote_path('s3://bucket/data.parquet') == true
+	assert vframes.is_remote_path('gs://bucket/data.parquet') == true
+	assert vframes.is_remote_path('az://container/data.csv') == true
+	assert vframes.is_remote_path('/local/path/data.csv') == false
+	assert vframes.is_remote_path('data.csv') == false
+}
+
+fn test_scheme_for_path() {
+	// remote paths need httpfs
+	assert vframes.scheme_for_path('s3://bucket/x.parquet') == 'httpfs'
+	assert vframes.scheme_for_path('https://x/y.csv') == 'httpfs'
+	// local xlsx needs excel
+	assert vframes.scheme_for_path('report.xlsx') == 'excel'
+	// plain local files need no extension
+	assert vframes.scheme_for_path('data.csv') == ''
+	assert vframes.scheme_for_path('data.parquet') == ''
+}
+
+fn test_read_csv_basic() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	tmp := os.join_path_single(os.temp_dir(), 'vframes_rc_${os.getpid()}.csv')
+	os.write_file(tmp, 'id,name\n1,Alice\n2,Bob\n')!
+	defer { os.rm(tmp) or {} }
+
+	df := ctx.read_csv(tmp)!
+	assert df.shape()![0] == 2
+	cols := df.columns()!
+	assert 'id' in cols
+	assert 'name' in cols
+}
+
+fn test_read_csv_custom_delimiter() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	tmp := os.join_path_single(os.temp_dir(), 'vframes_rc_semi_${os.getpid()}.csv')
+	os.write_file(tmp, 'id;name\n1;Alice\n2;Bob\n')!
+	defer { os.rm(tmp) or {} }
+
+	df := ctx.read_csv(tmp, delimiter: ';')!
+	assert df.shape()![1] == 2 // two columns, correctly split
+}
+
+fn test_read_csv_type_override() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	tmp := os.join_path_single(os.temp_dir(), 'vframes_rc_type_${os.getpid()}.csv')
+	os.write_file(tmp, 'id,name\n1,Alice\n2,Bob\n')!
+	defer { os.rm(tmp) or {} }
+
+	df := ctx.read_csv(tmp, columns: {'id': 'VARCHAR', 'name': 'VARCHAR'})!
+	types := df.dtypes()!
+	assert types['id'].to_upper().contains('VARCHAR')
+}
+
+fn test_read_parquet_local() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	// Existing fixture shipped in the repo.
+	df := ctx.read_parquet('examples/titanic.parquet')!
+	assert df.shape()![0] > 0
+	assert df.columns()!.len > 0
+}
+
+fn test_read_json_local() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	tmp := os.join_path_single(os.temp_dir(), 'vframes_rj_${os.getpid()}.json')
+	os.write_file(tmp, '[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]')!
+	defer { os.rm(tmp) or {} }
+
+	df := ctx.read_json(tmp, format: 'array')!
+	assert df.shape()![0] == 2
+}
+
+// (network) Requires the DuckDB 'excel' extension.
+fn test_excel_round_trip() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	data := [
+		{'id': json2.Any(1), 'name': json2.Any('Alice')},
+		{'id': json2.Any(2), 'name': json2.Any('Bob')},
+	]
+	df := ctx.read_records(data)!
+
+	xlsx_path := os.join_path_single(os.temp_dir(), 'vframes_xl_${os.getpid()}.xlsx')
+	defer { os.rm(xlsx_path) or {} }
+
+	df.to_excel(xlsx_path)!
+	assert os.is_file(xlsx_path)
+
+	df2 := ctx.read_excel(xlsx_path)!
+	assert df2.shape()![0] == 2
+}
+
+fn test_read_auto_routes_parquet() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	df := ctx.read_auto('examples/titanic.parquet')!
+	assert df.shape()![0] > 0
+}
+
+fn test_read_auto_local_csv_still_works() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	tmp := os.join_path_single(os.temp_dir(), 'vframes_ra_${os.getpid()}.csv')
+	os.write_file(tmp, 'id,name\n1,Alice\n')!
+	defer { os.rm(tmp) or {} }
+
+	df := ctx.read_auto(tmp)!
+	assert df.shape()![0] == 1
+}
+
+fn test_to_html() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	df := ctx.read_sql("SELECT 'Alice' AS name, 30 AS age UNION ALL SELECT 'Bob', 25")!
+	html := df.to_html()!
+	assert html.contains('<table')
+	assert html.contains('<th>name</th>')
+	assert html.contains('<td>Alice</td>')
+	assert html.contains('</table>')
+}

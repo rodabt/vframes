@@ -86,11 +86,11 @@ Various export formats.
 
 | Status | Function | Description |
 |--------|----------|-------------|
-| [ ] | `to_dict` | Export to dictionary |
+| [X] | `to_dict` | Export to dictionary |
 | [ ] | `to_string` | String representation |
-| [ ] | `to_html` | HTML table |
-| [ ] | `to_excel` | Excel file |
-| [ ] | `to_sql` | SQL table |
+| [X] | `to_html` | HTML table |
+| [X] | `to_excel` | Excel file |
+| [X] | `to_sql` | SQL table |
 | [ ] | `to_records` | NumPy records |
 | [ ] | `to_markdown` | Markdown table |
 | [ ] | `to_clipboard` | Copy to clipboard |
