@@ -14,6 +14,7 @@ VFrames provides a familiar data-manipulation API for V developers, backed by an
 - **Remote & cloud sources** — read directly from HTTPS URLs and S3 (and other cloud schemes)
 - **Live databases** — attach and query Postgres, MySQL, SQLite, and DuckDB databases
 - **Immutable design** — every operation returns a new DataFrame; originals are never mutated
+- **Lazy by default** — transformations build DuckDB views (no data copies); call `df.collect()` to materialize a result
 - **Full error propagation** — no hidden panics; errors surface as V result types (`!T`)
 - **Rich function set** — filtering, grouping, joins, pivots, rolling windows, cumulative ops, and more
 
@@ -94,6 +95,24 @@ Every method returns a **new** DataFrame backed by a new DuckDB table. Originals
 df2 := df.add_column('tax', 'salary * 0.2')!
 // df still has the original columns; df2 has the extra column
 ```
+
+### Lazy views & `collect()`
+
+Each transformation returns a new DataFrame backed by a DuckDB **view**, not a
+copied table — so chaining operations costs no extra memory. The query runs only
+at a materialization point (`head`, `values`, `to_csv`, `shape`, …).
+
+```v
+result := df.filter('age > 25')!.add_column('bonus', 'salary*0.1')!  // views, no data copied
+final  := result.collect()!   // materialize into a real table for reuse
+```
+
+`collect()` (and its alias `copy()`) snapshot a chain into an independent table —
+useful for an expensive intermediate you reuse, or to keep a result alive while
+the rest is discarded. Inspect state with `df.is_lazy()!` / `df.object_type()!`.
+Very deep chains print a one-time hint to call `collect()`; tune or disable it
+with `init(view_depth_warning: N)` (`0` disables). Base `read_*` operations and
+`pivot` materialize real tables.
 
 ### Error handling
 

@@ -1,11 +1,7 @@
 module vframes
 
-import rand
-
 // Internal: Apply function 'func' to numeric values
 fn (df DataFrame) v_apply(func string, args ...string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -19,11 +15,7 @@ fn (df DataFrame) v_apply(func string, args ...string) !DataFrame {
 			cols << k
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}")!
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 @[params]
@@ -34,9 +26,7 @@ pub struct FuncOptions {
 
 // Internal: Apply grouping function 'func' to numeric values
 fn (df DataFrame) min_max_apply(func string, fo FuncOptions) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
 	order_by := if func == 'min' { 'desc' } else { 'asc' }
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -46,18 +36,12 @@ fn (df DataFrame) min_max_apply(func string, fo FuncOptions) !DataFrame {
 			'last("${k}" order by "${k}" ${order_by}) as "${k}"'
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}")!
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Calculates the `func` value for each of the rows (`axis: 0`) or columns (`axis: 1`. default) of the DataFrame
 // NOTE: Only returns the numeric values
 fn (df DataFrame) g_apply(func string, fo FuncOptions) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -65,17 +49,11 @@ fn (df DataFrame) g_apply(func string, fo FuncOptions) !DataFrame {
 			cols << '${func}("${k}") as "${k}"'
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Adds value `n` to all numeric values
 pub fn (df DataFrame) add[T](n T) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -85,11 +63,7 @@ pub fn (df DataFrame) add[T](n T) !DataFrame {
 			k
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Calculates the absolute value for each element of the DataFrame
@@ -136,8 +110,6 @@ pub fn (df DataFrame) pow(n int, fo FuncOptions) !DataFrame {
 
 // Subtracts value `n` from all numeric values
 pub fn (df DataFrame) sub[T](n T) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -147,17 +119,11 @@ pub fn (df DataFrame) sub[T](n T) !DataFrame {
 			'"${k}"'
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Multiplies all numeric values by `n`
 pub fn (df DataFrame) mul[T](n T) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -167,17 +133,11 @@ pub fn (df DataFrame) mul[T](n T) !DataFrame {
 			'"${k}"'
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Divides all numeric values by `n`
 pub fn (df DataFrame) div[T](n T) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -187,17 +147,11 @@ pub fn (df DataFrame) div[T](n T) !DataFrame {
 			'"${k}"'
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Divides all numeric values by `n` (floor division)
 pub fn (df DataFrame) floordiv[T](n T) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -207,17 +161,11 @@ pub fn (df DataFrame) floordiv[T](n T) !DataFrame {
 			'"${k}"'
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Returns modulo of all numeric values with `n`
 pub fn (df DataFrame) mod[T](n T) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -227,17 +175,11 @@ pub fn (df DataFrame) mod[T](n T) !DataFrame {
 			'"${k}"'
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Rounds all numeric values to `decimals` decimal places
 pub fn (df DataFrame) round(decimals int) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -247,11 +189,7 @@ pub fn (df DataFrame) round(decimals int) !DataFrame {
 			'"${k}"'
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Returns the standard deviation for each numeric column
@@ -266,40 +204,26 @@ pub fn (df DataFrame) var() !DataFrame {
 
 // Returns the number of non-null values in each column
 pub fn (df DataFrame) count() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	all_cols := df.columns()!
 	for k in all_cols {
 		cols << 'count(${k}) as "${k}"'
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Returns the number of unique values in each column
 pub fn (df DataFrame) nunique() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	all_cols := df.columns()!
 	for k in all_cols {
 		cols << 'count(distinct ${k}) as "${k}"'
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Clips (limits) values in numeric columns to a range [min_val, max_val]
 pub fn (df DataFrame) clip(min_val f64, max_val f64) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -309,11 +233,7 @@ pub fn (df DataFrame) clip(min_val f64, max_val f64) !DataFrame {
 			k
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Returns rows where condition is true (inverse of where)
@@ -321,150 +241,79 @@ pub fn (df DataFrame) mask(condition string) !DataFrame {
 	return df.query('* where not (${condition})', DFConfig{})
 }
 
-// Element-wise equality comparison
-pub fn (df DataFrame) eq(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
+// Internal: element-wise comparison of two DataFrames using `op`, aligned by row
+// position via POSITIONAL JOIN (deterministic and view-safe — no rowid needed).
+fn (df DataFrame) compare(other DataFrame, op string) !DataFrame {
 	cols := df.columns()!
 	mut select_cols := []string{}
 	for col in cols {
-		select_cols << '(t1.${col} = t2.${col}) as "${col}"'
+		select_cols << '(t1."${col}" ${op} t2."${col}") as "${col}"'
 	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	body := 'select ${select_cols.join(',')} from ${df.id} t1 positional join ${other.id} t2'
+	parent := if df.depth > other.depth { df.depth } else { other.depth }
+	return df.derive(body, parent)
+}
+
+// Element-wise equality comparison
+pub fn (df DataFrame) eq(other DataFrame) !DataFrame {
+	return df.compare(other, '=')
 }
 
 // Element-wise inequality comparison
 pub fn (df DataFrame) ne(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	cols := df.columns()!
-	mut select_cols := []string{}
-	for col in cols {
-		select_cols << '(t1.${col} != t2.${col}) as "${col}"'
-	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.compare(other, '!=')
 }
 
 // Element-wise greater than comparison
 pub fn (df DataFrame) gt(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	cols := df.columns()!
-	mut select_cols := []string{}
-	for col in cols {
-		select_cols << '(t1.${col} > t2.${col}) as "${col}"'
-	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.compare(other, '>')
 }
 
 // Element-wise greater than or equal comparison
 pub fn (df DataFrame) ge(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	cols := df.columns()!
-	mut select_cols := []string{}
-	for col in cols {
-		select_cols << '(t1.${col} >= t2.${col}) as "${col}"'
-	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.compare(other, '>=')
 }
 
 // Element-wise less than comparison
 pub fn (df DataFrame) lt(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	cols := df.columns()!
-	mut select_cols := []string{}
-	for col in cols {
-		select_cols << '(t1.${col} < t2.${col}) as "${col}"'
-	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.compare(other, '<')
 }
 
 // Element-wise less than or equal comparison
 pub fn (df DataFrame) le(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	cols := df.columns()!
-	mut select_cols := []string{}
-	for col in cols {
-		select_cols << '(t1.${col} <= t2.${col}) as "${col}"'
-	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.compare(other, '<=')
 }
 
 // Returns rows with largest `n` values in numeric columns
 pub fn (df DataFrame) nlargest(n int) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	types := df.dtypes()!
 	numeric_cols := types.keys().filter(types[it] in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'])
 	if numeric_cols.len == 0 {
 		return df
 	}
 	first_numeric := numeric_cols[0]
-	_ := db.query("create table ${id} as select * from ${df.id} order by ${first_numeric} desc limit ${n}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select * from ${df.id} order by ${first_numeric} desc limit ${n}', df.depth)
 }
 
 // Returns rows with smallest `n` values in numeric columns
 pub fn (df DataFrame) nsmallest(n int) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	types := df.dtypes()!
 	numeric_cols := types.keys().filter(types[it] in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'])
 	if numeric_cols.len == 0 {
 		return df
 	}
 	first_numeric := numeric_cols[0]
-	_ := db.query("create table ${id} as select * from ${df.id} order by ${first_numeric} asc limit ${n}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select * from ${df.id} order by ${first_numeric} asc limit ${n}', df.depth)
 }
 
 // Returns a boolean DataFrame indicating where values are null
 pub fn (df DataFrame) isna() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	all_cols := df.columns()!
 	for k in all_cols {
 		cols << '("${k}" is null) as "${k}"'
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Alias for isna
@@ -486,33 +335,28 @@ pub:
 // If `method` is 'ffill', fills with the previous non-null value
 // If `method` is 'bfill', fills with the next non-null value
 pub fn (df DataFrame) fillna(fo FillnaOptions) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	all_cols := df.columns()!
-
+	mut body := ''
 	if fo.method == 'ffill' {
 		mut cols := []string{}
 		for k in all_cols {
 			cols << 'last_value("${k}" ignore nulls) over () as "${k}"'
 		}
-		_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
+		body = 'select ${cols.join(',')} from ${df.id}'
 	} else if fo.method == 'bfill' {
 		mut cols := []string{}
 		for k in all_cols {
-			cols << 'first_value("${k}" ignore nulls) over (order by rowid desc) as "${k}"'
+			cols << 'first_value("${k}" ignore nulls) over (order by _rn desc) as "${k}"'
 		}
-		_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
+		body = 'select ${cols.join(',')} from (select *, row_number() over () as _rn from ${df.id})'
 	} else {
 		mut cols := []string{}
 		for k in all_cols {
 			cols << 'coalesce("${k}", ${fo.value}) as "${k}"'
 		}
-		_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
+		body = 'select ${cols.join(',')} from ${df.id}'
 	}
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive(body, df.depth)
 }
 
 // Forward fill - fills NA values with the previous non-null value
@@ -527,18 +371,12 @@ pub fn (df DataFrame) bfill() !DataFrame {
 
 // Alias for isnull
 pub fn (df DataFrame) notna() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	all_cols := df.columns()!
 	for k in all_cols {
 		cols << '("${k}" is not null) as "${k}"'
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Alias for notna
@@ -548,24 +386,16 @@ pub fn (df DataFrame) notnull() !DataFrame {
 
 // Replaces values in the DataFrame. `to_replace` is the value to find, `value` is the replacement
 pub fn (df DataFrame) replace(to_replace string, value string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	all_cols := df.columns()!
 	for k in all_cols {
 		cols << 'replace("${k}", \'${to_replace}\', \'${value}\') as "${k}"'
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Converts column types. `dtype_map` is a map of column names to target types
 pub fn (df DataFrame) astype(dtype_map map[string]string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	all_cols := df.columns()!
 	for k in all_cols {
@@ -583,51 +413,34 @@ pub fn (df DataFrame) astype(dtype_map map[string]string) !DataFrame {
 			cols << k
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Returns a boolean DataFrame indicating whether each element is in the list of values
 pub fn (df DataFrame) isin(values []string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	values_list := values.map('\'${it}\'').join(', ')
 	mut cols := []string{}
 	all_cols := df.columns()!
 	for k in all_cols {
 		cols << '("${k}" in (${values_list})) as "${k}"'
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Returns a DataFrame with counts of unique values
 pub fn (df DataFrame) value_counts() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	cols := df.columns()!
 	if cols.len == 0 {
 		return df
 	}
 	first_col := cols[0]
-	_ := db.query('create table ${id} as select "${first_col}", count(*) as count from ${df.id} group by "${first_col}" order by count desc') or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select "${first_col}", count(*) as count from ${df.id} group by "${first_col}" order by count desc',
+		df.depth)
 }
 
 // Aggregate functions. `agg_dict` is a map of column names to aggregation functions
 // Supported functions: sum, mean, median, min, max, count, std, var
 pub fn (df DataFrame) agg(agg_dict map[string]string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	for col, func_name in agg_dict {
 		match func_name {
@@ -642,11 +455,7 @@ pub fn (df DataFrame) agg(agg_dict map[string]string) !DataFrame {
 			else { cols << '"${col}"' }
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Alias for agg
@@ -656,13 +465,7 @@ pub fn (df DataFrame) aggregate(agg_dict map[string]string) !DataFrame {
 
 // Apply a function to each element (requires SQL expression)
 pub fn (df DataFrame) apply(func_expr string) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	_ := db.query("create table ${id} as select ${func_expr} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${func_expr} from ${df.id}', df.depth)
 }
 
 // Map a function to each element (alias for apply)
@@ -679,8 +482,6 @@ pub struct RankOptions {
 
 // Returns ranks of values
 pub fn (df DataFrame) rank(ro RankOptions) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 
 	rank_func := match ro.method {
@@ -702,17 +503,11 @@ pub fn (df DataFrame) rank(ro RankOptions) !DataFrame {
 	for k in all_cols {
 		cols << '${rank_func}() over (order by "${k}" ${order} ${na_behavior}) as "${k}"'
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Calculate quantiles for numeric columns
 pub fn (df DataFrame) quantile(q f64) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -720,17 +515,11 @@ pub fn (df DataFrame) quantile(q f64) !DataFrame {
 			cols << 'quantile("${k}", ${q}) as "${k}"'
 		}
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Calculate correlation matrix for numeric columns
 pub fn (df DataFrame) corr() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	types := df.dtypes()!
 	cols := types.keys().filter(types[it] in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'])
 	if cols.len < 2 {
@@ -742,17 +531,11 @@ pub fn (df DataFrame) corr() !DataFrame {
 			corr_cols << 'corr("${col1}", "${col2}") as "${col1}_${col2}"'
 		}
 	}
-	_ := db.query("create table ${id} as select ${corr_cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${corr_cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Calculate covariance matrix for numeric columns
 pub fn (df DataFrame) cov() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	types := df.dtypes()!
 	cols := types.keys().filter(types[it] in ['integer', 'decimal', 'float', 'bigint', 'double', 'hugeint'])
 	if cols.len < 2 {
@@ -764,11 +547,7 @@ pub fn (df DataFrame) cov() !DataFrame {
 			cov_cols << 'covar_pop("${col1}", "${col2}") as "${col1}_${col2}"'
 		}
 	}
-	_ := db.query("create table ${id} as select ${cov_cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cov_cols.join(',')} from ${df.id}', df.depth)
 }
 
 @[params]
@@ -780,9 +559,6 @@ pub struct RollingOptions {
 
 // Rolling window calculations
 pub fn (df DataFrame) rolling(col string, func string, ro RollingOptions) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-
 	frame := if ro.center {
 		'rows between ${-ro.window / 2} preceding and ${ro.window / 2} following'
 	} else {
@@ -799,65 +575,42 @@ pub fn (df DataFrame) rolling(col string, func string, ro RollingOptions) !DataF
 		else { 'sum' }
 	}
 
-	_ := db.query('create table ${id} as select ${agg_func}("${col}") over (${frame}) as "${col}_${func}" from ${df.id}') or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${agg_func}("${col}") over (${frame}) as "${col}_${func}" from ${df.id}',
+		df.depth)
 }
 
 // Shift values by specified periods
 pub fn (df DataFrame) shift(periods int) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	all_cols := df.columns()!
 	for k in all_cols {
 		cols << 'lag("${k}", ${periods}) over () as "${k}"'
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Calculate differences between consecutive rows
 pub fn (df DataFrame) diff() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	all_cols := df.columns()!
 	for k in all_cols {
 		cols << '"${k}" - lag("${k}", 1) over () as "${k}"'
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Calculate percentage change between consecutive rows
 pub fn (df DataFrame) pct_change() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	all_cols := df.columns()!
 	for k in all_cols {
 		cols << '("${k}" - lag("${k}", 1) over ()) / nullif(lag("${k}", 1) over (), 0) * 100 as "${k}"'
 	}
-	_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive('select ${cols.join(',')} from ${df.id}', df.depth)
 }
 
 // Cumulative sum of each numeric column
 pub fn (df DataFrame) cumsum() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -867,14 +620,11 @@ pub fn (df DataFrame) cumsum() !DataFrame {
 			'"${k}"'
 		}
 	}
-	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
-	return DataFrame{ id: id, ctx: df.ctx }
+	return df.derive('select ${cols.join(', ')} from ${df.id}', df.depth)
 }
 
 // Cumulative maximum of each numeric column
 pub fn (df DataFrame) cummax() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -884,14 +634,11 @@ pub fn (df DataFrame) cummax() !DataFrame {
 			'"${k}"'
 		}
 	}
-	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
-	return DataFrame{ id: id, ctx: df.ctx }
+	return df.derive('select ${cols.join(', ')} from ${df.id}', df.depth)
 }
 
 // Cumulative minimum of each numeric column
 pub fn (df DataFrame) cummin() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -901,14 +648,11 @@ pub fn (df DataFrame) cummin() !DataFrame {
 			'"${k}"'
 		}
 	}
-	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
-	return DataFrame{ id: id, ctx: df.ctx }
+	return df.derive('select ${cols.join(', ')} from ${df.id}', df.depth)
 }
 
 // Cumulative product of each numeric column
 pub fn (df DataFrame) cumprod() !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	mut cols := []string{}
 	types := df.dtypes()!
 	for k, v in types {
@@ -918,6 +662,5 @@ pub fn (df DataFrame) cumprod() !DataFrame {
 			'"${k}"'
 		}
 	}
-	_ := db.query('CREATE TABLE ${id} AS SELECT ${cols.join(', ')} FROM ${df.id}') or { return err }
-	return DataFrame{ id: id, ctx: df.ctx }
+	return df.derive('select ${cols.join(', ')} from ${df.id}', df.depth)
 }

@@ -178,10 +178,8 @@ Many functions can leverage DuckDB's powerful SQL engine:
 - `quantile` - SQL quantile functions
 
 ### Memory Management
-Consider implementing:
-- Automatic cleanup of intermediate tables
-- Table naming strategy for garbage collection
-- Memory-mapped file handling for large datasets
+- **Resolved (lazy views):** Intermediate transformations are now DuckDB **views**, not copied tables, so chained operations no longer accumulate data copies. `collect()` materializes a chain on demand, and a configurable depth warning (`init(view_depth_warning: N)`) flags very deep view chains. Base `read_*` ops and `pivot` still materialize real tables.
+- Possible future work: memory-mapped file handling for very large datasets; optional view cleanup for extremely long-lived contexts.
 
 ## Contributing
 
