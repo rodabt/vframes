@@ -1,7 +1,5 @@
 module vframes
 
-import rand
-
 // Internal: Apply function 'func' to numeric values
 fn (df DataFrame) v_apply(func string, args ...string) !DataFrame {
 	mut cols := []string{}
@@ -243,100 +241,47 @@ pub fn (df DataFrame) mask(condition string) !DataFrame {
 	return df.query('* where not (${condition})', DFConfig{})
 }
 
-// Element-wise equality comparison
-pub fn (df DataFrame) eq(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
+// Internal: element-wise comparison of two DataFrames using `op`, aligned by row
+// position via POSITIONAL JOIN (deterministic and view-safe — no rowid needed).
+fn (df DataFrame) compare(other DataFrame, op string) !DataFrame {
 	cols := df.columns()!
 	mut select_cols := []string{}
 	for col in cols {
-		select_cols << '(t1.${col} = t2.${col}) as "${col}"'
+		select_cols << '(t1."${col}" ${op} t2."${col}") as "${col}"'
 	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	body := 'select ${select_cols.join(',')} from ${df.id} t1 positional join ${other.id} t2'
+	parent := if df.depth > other.depth { df.depth } else { other.depth }
+	return df.derive(body, parent)
+}
+
+// Element-wise equality comparison
+pub fn (df DataFrame) eq(other DataFrame) !DataFrame {
+	return df.compare(other, '=')
 }
 
 // Element-wise inequality comparison
 pub fn (df DataFrame) ne(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	cols := df.columns()!
-	mut select_cols := []string{}
-	for col in cols {
-		select_cols << '(t1.${col} != t2.${col}) as "${col}"'
-	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.compare(other, '!=')
 }
 
 // Element-wise greater than comparison
 pub fn (df DataFrame) gt(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	cols := df.columns()!
-	mut select_cols := []string{}
-	for col in cols {
-		select_cols << '(t1.${col} > t2.${col}) as "${col}"'
-	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.compare(other, '>')
 }
 
 // Element-wise greater than or equal comparison
 pub fn (df DataFrame) ge(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	cols := df.columns()!
-	mut select_cols := []string{}
-	for col in cols {
-		select_cols << '(t1.${col} >= t2.${col}) as "${col}"'
-	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.compare(other, '>=')
 }
 
 // Element-wise less than comparison
 pub fn (df DataFrame) lt(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	cols := df.columns()!
-	mut select_cols := []string{}
-	for col in cols {
-		select_cols << '(t1.${col} < t2.${col}) as "${col}"'
-	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.compare(other, '<')
 }
 
 // Element-wise less than or equal comparison
 pub fn (df DataFrame) le(other DataFrame) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-	cols := df.columns()!
-	mut select_cols := []string{}
-	for col in cols {
-		select_cols << '(t1.${col} <= t2.${col}) as "${col}"'
-	}
-	_ := db.query("create table ${id} as select ${select_cols.join(',')} from ${df.id} t1 join ${other.id} t2 using (rowid)") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.compare(other, '<=')
 }
 
 // Returns rows with largest `n` values in numeric columns
@@ -390,33 +335,28 @@ pub:
 // If `method` is 'ffill', fills with the previous non-null value
 // If `method` is 'bfill', fills with the next non-null value
 pub fn (df DataFrame) fillna(fo FillnaOptions) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
 	all_cols := df.columns()!
-
+	mut body := ''
 	if fo.method == 'ffill' {
 		mut cols := []string{}
 		for k in all_cols {
 			cols << 'last_value("${k}" ignore nulls) over () as "${k}"'
 		}
-		_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
+		body = 'select ${cols.join(',')} from ${df.id}'
 	} else if fo.method == 'bfill' {
 		mut cols := []string{}
 		for k in all_cols {
-			cols << 'first_value("${k}" ignore nulls) over (order by rowid desc) as "${k}"'
+			cols << 'first_value("${k}" ignore nulls) over (order by _rn desc) as "${k}"'
 		}
-		_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
+		body = 'select ${cols.join(',')} from (select *, row_number() over () as _rn from ${df.id})'
 	} else {
 		mut cols := []string{}
 		for k in all_cols {
 			cols << 'coalesce("${k}", ${fo.value}) as "${k}"'
 		}
-		_ := db.query("create table ${id} as select ${cols.join(',')} from ${df.id}") or { return err }
+		body = 'select ${cols.join(',')} from ${df.id}'
 	}
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive(body, df.depth)
 }
 
 // Forward fill - fills NA values with the previous non-null value

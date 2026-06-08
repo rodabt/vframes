@@ -57,3 +57,39 @@ fn test_transformation_is_view() {
 	rows := chained.values(vframes.ValuesParams{})! as []map[string]json2.Any
 	assert rows[0]['x'] or { json2.Any(0) }.int() == 30 // (10+5)*2
 }
+
+fn test_eq_on_views() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	data := [
+		{'a': json2.Any(1), 'b': json2.Any(1)},
+		{'a': json2.Any(2), 'b': json2.Any(9)},
+	]
+	df := ctx.read_records(data)!
+	// compare a view against a view (both are transformations); previously this
+	// errored because views do not expose rowid. eq now uses POSITIONAL JOIN.
+	// NOTE: boolean columns are read back as '' by the vduckdb binding, so we
+	// assert structure (view, row/col count), as the other boolean ops do.
+	left := df.add(0)!
+	right := df.add(0)!
+	res := left.eq(right)!
+	assert res.object_type()! == 'VIEW'
+	assert res.shape()![0] == 2
+	assert res.columns()! == ['a', 'b']
+}
+
+fn test_bfill_on_view() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	data := [
+		{'x': json2.Any(1), 'y': json2.Any(json2.null)},
+		{'x': json2.Any(json2.null), 'y': json2.Any(2)},
+	]
+	df := ctx.read_records(data)!
+	// bfill applied to a view (a transformed frame), exercising the rowid rewrite
+	v := df.add(0)!
+	filled := v.bfill()!
+	assert filled.shape()![0] == 2
+}
