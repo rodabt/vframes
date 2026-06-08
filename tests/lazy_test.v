@@ -102,6 +102,44 @@ fn test_mutation_ops_are_views() {
 	assert sorted.object_type()! == 'VIEW'
 }
 
+fn test_multi_source_ops_are_views() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	left := ctx.read_records([
+		{'id': json2.Any(1), 'name': json2.Any('Alice')},
+		{'id': json2.Any(2), 'name': json2.Any('Bob')},
+	])!
+	right := ctx.read_records([
+		{'id': json2.Any(1), 'score': json2.Any(90)},
+		{'id': json2.Any(2), 'score': json2.Any(80)},
+	])!
+
+	merged := left.merge(right, on: 'id')!
+	assert merged.object_type()! == 'VIEW'
+	assert merged.shape()![0] == 2
+
+	// concat two distinct same-schema frames (mirrors tests/mutation_test.v)
+	c1 := ctx.read_records([
+		{'x': json2.Any(1), 'y': json2.Any('a')},
+		{'x': json2.Any(2), 'y': json2.Any('b')},
+	])!
+	c2 := ctx.read_records([
+		{'x': json2.Any(3), 'y': json2.Any('c')},
+		{'x': json2.Any(4), 'y': json2.Any('d')},
+	])!
+	stacked := vframes.concat([c1, c2])!
+	assert stacked.object_type()! == 'VIEW'
+	assert stacked.shape()![0] == 4
+
+	wide := ctx.read_records([
+		{'k': json2.Any('r1'), 'm1': json2.Any(1), 'm2': json2.Any(2)},
+	])!
+	melted := wide.melt(id_vars: ['k'], value_vars: ['m1', 'm2'])!
+	assert melted.object_type()! == 'VIEW'
+	assert melted.shape()![0] == 2
+}
+
 fn test_bfill_on_view() {
 	mut ctx := vframes.init()!
 	defer { ctx.close() }

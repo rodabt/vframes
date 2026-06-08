@@ -143,9 +143,6 @@ pub:
 
 // Merge two DataFrames (SQL JOIN)
 pub fn (df DataFrame) merge(other DataFrame, mo MergeOptions) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-
 	how_sql := match mo.how {
 		'left' { 'left join' }
 		'right' { 'right join' }
@@ -157,12 +154,9 @@ pub fn (df DataFrame) merge(other DataFrame, mo MergeOptions) !DataFrame {
 	suffix_left := if mo.left_on != '' { mo.left_on } else { mo.on }
 	suffix_right := if mo.right_on != '' { mo.right_on } else { mo.on }
 
-	query := "create table ${id} as select * from ${df.id} t1 ${how_sql} ${other.id} t2 on t1.\"${suffix_left}\" = t2.\"${suffix_right}\""
-	_ := db.query(query) or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	body := 'select * from ${df.id} t1 ${how_sql} ${other.id} t2 on t1."${suffix_left}" = t2."${suffix_right}"'
+	parent := if df.depth > other.depth { df.depth } else { other.depth }
+	return df.derive(body, parent)
 }
 
 // Join two DataFrames (alias for merge)
@@ -179,15 +173,14 @@ pub fn concat(dfs []DataFrame) !DataFrame {
 		return dfs[0]
 	}
 
-	id := 'tbl_${rand.ulid()}'
-	mut db := &dfs[0].ctx.db
-
 	table_names := dfs.map(it.id).join(', ')
-	_ := db.query("create table ${id} as select * from ${table_names}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: dfs[0].ctx
+	mut max_d := 0
+	for d in dfs {
+		if d.depth > max_d {
+			max_d = d.depth
+		}
 	}
+	return dfs[0].derive('select * from ${table_names}', max_d)
 }
 
 @[params]
@@ -199,12 +192,17 @@ pub:
 	aggfunc string = 'max'
 }
 
-// Pivot table - reshape data from long to wide format
+// Pivot table - reshape data from long to wide format.
+// NOTE: pivot materializes a real table (depth reset to 0). Auto-discovering
+// PIVOT cannot be expressed as a view because its output columns are derived
+// from the data, which DuckDB disallows in `CREATE VIEW`.
 pub fn (df DataFrame) pivot(po PivotOptions) !DataFrame {
 	id := 'tbl_${rand.ulid()}'
 	mut db := &df.ctx.db
 	aggfunc := if po.aggfunc != '' { po.aggfunc } else { 'max' }
-	_ := db.query('CREATE TABLE ${id} AS PIVOT ${df.id} ON "${po.columns}" USING ${aggfunc}("${po.values}") AS "${po.values}" GROUP BY "${po.index}" ORDER BY "${po.index}"') or { return err }
+	_ := db.query('CREATE TABLE ${id} AS PIVOT ${df.id} ON "${po.columns}" USING ${aggfunc}("${po.values}") AS "${po.values}" GROUP BY "${po.index}" ORDER BY "${po.index}"') or {
+		return err
+	}
 	return DataFrame{
 		id: id
 		ctx: df.ctx
@@ -227,20 +225,12 @@ pub:
 
 // Unpivot DataFrame from wide to long format
 pub fn (df DataFrame) melt(mo MeltOptions) !DataFrame {
-	id := 'tbl_${rand.ulid()}'
-	mut db := &df.ctx.db
-
 	id_cols := mo.id_vars.map('"${it}"').join(', ')
 	mut queries := []string{}
 	for val_col in mo.value_vars {
 		queries << 'select ${id_cols}, \'${val_col}\' as "${mo.var_name}", "${val_col}" as "${mo.value_name}" from ${df.id}'
 	}
-	query_str := queries.join(' union all ')
-	_ := db.query("create table ${id} as ${query_str}") or { return err }
-	return DataFrame{
-		id: id
-		ctx: df.ctx
-	}
+	return df.derive(queries.join(' union all '), df.depth)
 }
 
 // Add new columns via assignment
