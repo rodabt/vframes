@@ -31,3 +31,39 @@ fn test_read_sql_escape_hatch() {
 	assert df.shape()![0] == 2
 	assert df.shape()![1] == 2
 }
+
+// (network) Requires the DuckDB 'sqlite' extension.
+fn test_to_sql_round_trip() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	db_path := os.join_path_single(os.temp_dir(), 'vframes_tosql_${os.getpid()}.db')
+	defer { os.rm(db_path) or {} }
+
+	ctx.attach(db_path, alias: 'dst', db_type: .sqlite, read_only: false)!
+
+	src := ctx.read_sql("SELECT 1 AS id, 'X' AS label UNION ALL SELECT 2, 'Y'")!
+	src.to_sql('people', alias: 'dst', if_exists: 'replace')!
+
+	back := ctx.read_table('dst.people')!
+	assert back.shape()![0] == 2
+
+	ctx.detach('dst')!
+}
+
+// (network) Requires the DuckDB 'sqlite' extension.
+fn test_read_database_one_shot() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	db_path := os.join_path_single(os.temp_dir(), 'vframes_rdb_${os.getpid()}.db')
+	defer { os.rm(db_path) or {} }
+
+	// Seed via a temporary attach.
+	ctx.attach(db_path, alias: 'seed', db_type: .sqlite, read_only: false)!
+	ctx.exec_sql('CREATE TABLE seed.t AS SELECT 42 AS answer')!
+	ctx.detach('seed')!
+
+	df := ctx.read_database(db_path, 'SELECT * FROM onesh.t', alias: 'onesh', db_type: .sqlite)!
+	assert df.shape()![0] == 1
+}

@@ -94,3 +94,53 @@ pub fn (mut ctx DataFrameContext) exec_sql(stmt string) ! {
 		return error('exec_sql failed: ${err.msg()}')
 	}
 }
+
+@[params]
+pub struct ToSqlOptions {
+pub:
+	alias     string // target attached-database alias (required)
+	if_exists string = 'fail' // 'fail' | 'replace' | 'append'
+}
+
+// to_sql writes the DataFrame into a table inside an attached database.
+pub fn (df DataFrame) to_sql(table string, opts ToSqlOptions) ! {
+	if opts.alias == '' {
+		return error('to_sql requires opts.alias (the attached-database alias)')
+	}
+	target := '${opts.alias}.${table}'
+	mut db := &df.ctx.db
+	match opts.if_exists {
+		'replace' {
+			db.query('DROP TABLE IF EXISTS ${target}') or {
+				return error('to_sql failed dropping "${target}": ${err.msg()}')
+			}
+			db.query('CREATE TABLE ${target} AS SELECT * FROM ${df.id}') or {
+				return error('to_sql failed creating "${target}": ${err.msg()}')
+			}
+		}
+		'append' {
+			db.query('INSERT INTO ${target} SELECT * FROM ${df.id}') or {
+				return error('to_sql failed appending to "${target}": ${err.msg()}')
+			}
+		}
+		else { // 'fail'
+			db.query('CREATE TABLE ${target} AS SELECT * FROM ${df.id}') or {
+				return error('to_sql failed creating "${target}" (does it already exist?): ${err.msg()}')
+			}
+		}
+	}
+}
+
+// read_database attaches a database, runs a query, returns a DataFrame, then detaches.
+pub fn (mut ctx DataFrameContext) read_database(dsn string, query string, opts AttachOptions) !DataFrame {
+	if opts.alias == '' {
+		return error('read_database requires a non-empty alias (referenced in the query)')
+	}
+	ctx.attach(dsn, opts)!
+	df := ctx.read_sql(query) or {
+		ctx.detach(opts.alias) or {}
+		return err
+	}
+	ctx.detach(opts.alias)!
+	return df
+}
