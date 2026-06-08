@@ -53,6 +53,24 @@ import pandas as pd
 # No explicit initialization needed
 ```
 
+### Lazy by default
+
+Transformations are **lazy**: each one returns a new DataFrame backed by a DuckDB
+view (no data is copied). The query runs only when you materialize — `head`,
+`values`, `to_csv`, `shape`, etc. Call `collect()` to snapshot a chain into a
+real table when you want to reuse an expensive result.
+
+```v
+chained := df.filter('age > 25')!.add_column('bonus', 'salary*0.1')!  // views only
+final   := chained.collect()!   // materialize once for reuse
+
+println(chained.is_lazy()!)      // true  (a view)
+println(final.is_lazy()!)        // false (a real table)
+```
+
+Very deep chains print a one-time hint to call `collect()`; configure the
+threshold with `init(view_depth_warning: N)` (`0` disables it).
+
 ---
 
 ## Loading Data
