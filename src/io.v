@@ -74,6 +74,29 @@ pub fn (df DataFrame) to_dict() ![]map[string]json2.Any {
 	return db.get_array()
 }
 
+// Returns true if the path points at a remote/cloud location (needs the httpfs extension).
+pub fn is_remote_path(path string) bool {
+	prefixes := ['http://', 'https://', 's3://', 'gs://', 'az://', 'azure://', 'r2://']
+	for p in prefixes {
+		if path.starts_with(p) {
+			return true
+		}
+	}
+	return false
+}
+
+// Returns the DuckDB extension a path requires before it can be read, or '' if none.
+// Remote paths require 'httpfs'; local .xlsx files require 'excel'.
+pub fn scheme_for_path(path string) string {
+	if is_remote_path(path) {
+		return 'httpfs'
+	}
+	if path.to_lower().ends_with('.xlsx') {
+		return 'excel'
+	}
+	return ''
+}
+
 // Returns the DataFrame as a Markdown table string
 pub fn (df DataFrame) to_markdown() !string {
 	mut db := &df.ctx.db
