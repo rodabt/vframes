@@ -33,3 +33,27 @@ fn test_collect_materializes() {
 	cp := df.copy()!
 	assert cp.shape()![0] == 2
 }
+
+fn test_transformation_is_view() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	data := [
+		{'x': json2.Any(10), 'y': json2.Any(100.0)},
+		{'x': json2.Any(20), 'y': json2.Any(200.0)},
+	]
+	df := ctx.read_records(data)!
+
+	added := df.add(5)!
+	assert added.object_type()! == 'VIEW'
+	assert added.is_lazy()! == true
+	assert added.chain_depth() == 1
+
+	// chaining increases depth
+	chained := added.mul(2)!
+	assert chained.chain_depth() == 2
+
+	// result is still correct
+	rows := chained.values(vframes.ValuesParams{})! as []map[string]json2.Any
+	assert rows[0]['x'] or { json2.Any(0) }.int() == 30 // (10+5)*2
+}
