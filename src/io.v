@@ -8,14 +8,20 @@ import x.json2
 // Currently Accepted formats: .csv, .json, .parquet
 // NOTE: The json parser is still under testing
 pub fn (mut ctx DataFrameContext) read_auto(filename string) !DataFrame {
-	if !os.is_file(filename) {
+	// Local non-glob files must exist; remote and glob paths are validated by DuckDB.
+	if !is_remote_path(filename) && !filename.contains('*') && !os.is_file(filename) {
 		return error("Incorrect filename: ${filename}")
 	}
-	id := 'tbl_${rand.ulid()}'
-	mut df := DataFrame{
-		ctx: ctx
+	lower := filename.to_lower()
+	if lower.ends_with('.xlsx') {
+		return ctx.read_excel(filename)
 	}
-	mut db := &df.ctx.db
+	// Ensure httpfs for remote files so the generic reader can fetch them.
+	if is_remote_path(filename) {
+		ctx.ensure_extension('httpfs')!
+	}
+	id := 'tbl_${rand.ulid()}'
+	mut db := &ctx.db
 	_ := db.query("create table ${id} as select * from '${filename}'") or { return err }
 	return DataFrame{
 		id: id

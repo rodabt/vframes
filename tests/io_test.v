@@ -105,3 +105,23 @@ fn test_excel_round_trip() {
 	df2 := ctx.read_excel(xlsx_path)!
 	assert df2.shape()![0] == 2
 }
+
+fn test_read_auto_routes_parquet() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	df := ctx.read_auto('examples/titanic.parquet')!
+	assert df.shape()![0] > 0
+}
+
+fn test_read_auto_local_csv_still_works() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	tmp := os.join_path_single(os.temp_dir(), 'vframes_ra_${os.getpid()}.csv')
+	os.write_file(tmp, 'id,name\n1,Alice\n')!
+	defer { os.rm(tmp) or {} }
+
+	df := ctx.read_auto(tmp)!
+	assert df.shape()![0] == 1
+}
