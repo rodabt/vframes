@@ -1,4 +1,5 @@
 import vframes
+import os
 
 fn test_is_remote_path() {
 	assert vframes.is_remote_path('https://example.com/data.csv') == true
@@ -19,4 +20,44 @@ fn test_scheme_for_path() {
 	// plain local files need no extension
 	assert vframes.scheme_for_path('data.csv') == ''
 	assert vframes.scheme_for_path('data.parquet') == ''
+}
+
+fn test_read_csv_basic() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	tmp := os.join_path_single(os.temp_dir(), 'vframes_rc_${os.getpid()}.csv')
+	os.write_file(tmp, 'id,name\n1,Alice\n2,Bob\n')!
+	defer { os.rm(tmp) or {} }
+
+	df := ctx.read_csv(tmp)!
+	assert df.shape()![0] == 2
+	cols := df.columns()!
+	assert 'id' in cols
+	assert 'name' in cols
+}
+
+fn test_read_csv_custom_delimiter() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	tmp := os.join_path_single(os.temp_dir(), 'vframes_rc_semi_${os.getpid()}.csv')
+	os.write_file(tmp, 'id;name\n1;Alice\n2;Bob\n')!
+	defer { os.rm(tmp) or {} }
+
+	df := ctx.read_csv(tmp, delimiter: ';')!
+	assert df.shape()![1] == 2 // two columns, correctly split
+}
+
+fn test_read_csv_type_override() {
+	mut ctx := vframes.init()!
+	defer { ctx.close() }
+
+	tmp := os.join_path_single(os.temp_dir(), 'vframes_rc_type_${os.getpid()}.csv')
+	os.write_file(tmp, 'id,name\n1,Alice\n2,Bob\n')!
+	defer { os.rm(tmp) or {} }
+
+	df := ctx.read_csv(tmp, columns: {'id': 'VARCHAR', 'name': 'VARCHAR'})!
+	types := df.dtypes()!
+	assert types['id'].to_upper().contains('VARCHAR')
 }

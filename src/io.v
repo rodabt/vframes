@@ -74,6 +74,60 @@ pub fn (df DataFrame) to_dict() ![]map[string]json2.Any {
 	return db.get_array()
 }
 
+@[params]
+pub struct ReadCsvOptions {
+pub:
+	delimiter   string            // '' = DuckDB auto-detect
+	header      bool = true       // used only when auto_header is false
+	auto_header bool = true       // true = let DuckDB detect the header row
+	columns     map[string]string // explicit name -> SQL type overrides
+	all_varchar bool              // read every column as VARCHAR
+	nullstr     string            // string treated as NULL
+	sample_size int               // 0 = DuckDB default
+}
+
+// Reads a CSV file (local path or remote URL) into a new DataFrame.
+// Supports glob patterns (e.g. 'data/*.csv') which DuckDB unions into one table.
+pub fn (mut ctx DataFrameContext) read_csv(path string, opts ReadCsvOptions) !DataFrame {
+	ext := scheme_for_path(path)
+	if ext != '' {
+		ctx.ensure_extension(ext)!
+	}
+	mut args := []string{}
+	if opts.delimiter != '' {
+		args << "delim='${opts.delimiter}'"
+	}
+	if !opts.auto_header {
+		args << 'header=${opts.header}'
+	}
+	if opts.all_varchar {
+		args << 'all_varchar=true'
+	}
+	if opts.nullstr != '' {
+		args << "nullstr='${opts.nullstr}'"
+	}
+	if opts.sample_size > 0 {
+		args << 'sample_size=${opts.sample_size}'
+	}
+	if opts.columns.len > 0 {
+		mut pairs := []string{}
+		for k, v in opts.columns {
+			pairs << "'${k}': '${v}'"
+		}
+		args << 'columns={${pairs.join(', ')}}'
+	}
+	arg_str := if args.len > 0 { ', ' + args.join(', ') } else { '' }
+	id := 'tbl_${rand.ulid()}'
+	mut db := &ctx.db
+	db.query("create table ${id} as select * from read_csv('${path}'${arg_str})") or {
+		return error('Failed to read CSV "${path}": ${err.msg()}')
+	}
+	return DataFrame{
+		id: id
+		ctx: ctx
+	}
+}
+
 // Returns true if the path points at a remote/cloud location (needs the httpfs extension).
 pub fn is_remote_path(path string) bool {
 	prefixes := ['http://', 'https://', 's3://', 'gs://', 'az://', 'azure://', 'r2://']
