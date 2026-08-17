@@ -152,14 +152,14 @@ fn main() {
 
 	print_header('Checking Values')
 	
-	// Check if values are in a list
+	// Check if values are in a list (select string column first to avoid type mismatch)
 	println('\nCheck if category is in ["A", "C"]:')
-	df_isin := df_clean.isin(['A', 'C'])!
+	df_isin := df_clean.select_cols(['category'])!.isin(['A', 'C'])!
 	df_isin.head(10)!
 	
-	// Replace values
+	// Replace values (select string column first to avoid type mismatch)
 	println('\nReplace "A" with "Alpha":')
-	df_replaced := df_clean.replace('A', 'Alpha')!
+	df_replaced := df_clean.select_cols(['category'])!.replace('A', 'Alpha')!
 	df_replaced.head(10)!
 
 	print_header('Advanced Features Complete')

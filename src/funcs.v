@@ -351,8 +351,10 @@ pub fn (df DataFrame) fillna(fo FillnaOptions) !DataFrame {
 		body = 'select ${cols.join(',')} from (select *, row_number() over () as _rn from ${df.id})'
 	} else {
 		mut cols := []string{}
+		col_types := df.dtypes()!
 		for k in all_cols {
-			cols << 'coalesce("${k}", ${fo.value}) as "${k}"'
+			col_type := col_types[k] or { 'VARCHAR' }
+			cols << 'coalesce("${k}", cast(${fo.value} as ${col_type})) as "${k}"'
 		}
 		body = 'select ${cols.join(',')} from ${df.id}'
 	}

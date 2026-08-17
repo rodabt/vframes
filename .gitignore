@@ -4,7 +4,7 @@ examples/*
 !examples/*.v
 
 # Ignore binary output folders
-tmp/
+.tmp/
 
 # Ignore common editor/system specific metadata
 .DS_Store
